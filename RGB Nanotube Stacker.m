@@ -34,7 +34,7 @@ ColorNanotubeImages = ParallelTable[ImageAdjust[ColorCombine[{GreenNanotubeImage
 
 Print["Exporting color images as tifs and jpgs..."]
 (*Export color images to the RGB Stacks Folders as tif and jpg*)
-ParallelTable[CreateDirectory[BaseFolders[[i]] <> "\\RGB Stacks tif"], {i, NumFolders}]
-ParallelTable[CreateDirectory[BaseFolders[[i]] <> "\\RGB Stacks jpg"], {i, NumFolders}]
+ParallelTable[Quiet[CreateDirectory[BaseFolders[[i]] <> "\\RGB Stacks tif"]], {i, NumFolders}]
+ParallelTable[Quiet[CreateDirectory[BaseFolders[[i]] <> "\\RGB Stacks jpg"]], {i, NumFolders}]
 ParallelTable[Export[BaseFolders[[i]] <> "\\RGB Stacks tif\\" <> ImageBaseFileNames[[i, j]] <> ".tif", ColorNanotubeImages[[i, j]]], {i, NumFolders}, {j, NumImages[[i]]}]
 ParallelTable[Export[BaseFolders[[i]] <> "\\RGB Stacks jpg\\" <> ImageBaseFileNames[[i, j]] <> ".jpg", ColorNanotubeImages[[i, j]]], {i, NumFolders}, {j, NumImages[[i]]}]
