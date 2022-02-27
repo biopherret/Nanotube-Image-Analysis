@@ -30,8 +30,6 @@ green image in the red channel, blue image in the green and blue channel
 increase contrast after combining the images*)
 ColorNanotubeImages = ParallelTable[ImageAdjust[ColorCombine[{GreenNanotubeImages[[i, j]], BlueNanotubeImages[[i, j]], BlueNanotubeImages[[i, j]]}, "RGB"], 1.8], {i, NumFolders}, {j, NumImages[[i]]}]
 
-(*ParallelTable[{ColorNanotubeImages[[i,j]]}, Epilog -> Insert[Graphics[{Thick, Thick, Yellow, Line[{{100, 100}, {166, 100}}], Text[Style["10 \[Mu]", Yellow, Bold, 25], {120, 110}]}], Scaled[{0.15, 0.9}]]]*)
-
 Print["Exporting color images as tifs and jpgs..."]
 (*Export color images to the RGB Stacks Folders as tif and jpg*)
 ParallelTable[Quiet[CreateDirectory[BaseFolders[[i]] <> "\\RGB Stacks tif"]], {i, NumFolders}]
