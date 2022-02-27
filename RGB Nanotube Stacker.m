@@ -11,7 +11,7 @@ RAWFolders = ParallelTable[BaseFolders[[i]] <> "\\RAW", {i, NumFolders}]
 (*Make sure images taken under green fluorescence have "green" in their file name,same for blue fluorescence First part of the file name for images to be grouped must be the same so images get paired properly*)
 BlueFiles = ParallelTable[Flatten[Select[FileNames["*blue*", RAWFolders[[i]]], StringMatchQ[#, __ ~~ "tif"] &]], {i, NumFolders}]
 GreenFiles = ParallelTable[Flatten[Select[FileNames["*green*", RAWFolders[[i]]], StringMatchQ[#, __ ~~ "tif"] &]], {i, NumFolders}]
-NumImages = ParallelTable[Length[BlueFiles[[i]]], {i, NumFolders}]
+NumImages = ParallelTable[Length[BlueFiles[[i]]], {i, NumFolders}] (*there should be an equal number of blue files as green files*)
 
 (*Get the Image file names, without color to use to name final stacked images*)
 ImageFileNames = ParallelTable[Flatten[FileNames[All, RAWFolders[[i]]]], {i, NumFolders}]
@@ -25,8 +25,10 @@ BlueNanotubeImages = ParallelTable[ImageCrop[Import[BlueFiles[[i, j]]]*400, {135
 GreenNanotubeImages = ParallelTable[ImageCrop[Import[GreenFiles[[i, j]]]*250, {1354, 1030}, {Left, Bottom}], {i, NumFolders}, {j, NumImages[[i]]}]
 
 Print["Creating composit images..."]
-(*RBG stack green and blue fluorescence images*)
-ColorNanotubeImages = ParallelTable[ImageAdjust[ColorCombine[{GreenNanotubeImages[[i, j]], BlueNanotubeImages[[i, j]], BlueNanotubeImages[[i, j]] }, "RGB"], 1.8], {i, NumFolders}, {j, NumImages[[i]]}]
+(*RBG stack green and blue fluorescence images 
+green image in the red channel, blue image in the green and blue channel
+increase contrast after combining the images*)
+ColorNanotubeImages = ParallelTable[ImageAdjust[ColorCombine[{GreenNanotubeImages[[i, j]], BlueNanotubeImages[[i, j]], BlueNanotubeImages[[i, j]]}, "RGB"], 1.8], {i, NumFolders}, {j, NumImages[[i]]}]
 
 (*ParallelTable[{ColorNanotubeImages[[i,j]]}, Epilog -> Insert[Graphics[{Thick, Thick, Yellow, Line[{{100, 100}, {166, 100}}], Text[Style["10 \[Mu]", Yellow, Bold, 25], {120, 110}]}], Scaled[{0.15, 0.9}]]]*)
 
