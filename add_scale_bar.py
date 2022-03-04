@@ -41,10 +41,10 @@ for folder in base_folders:
         #add the scale bar
         scalebar = AnchoredSizeBar(ax.transData,
                            155, '10 \u03BCm', 'lower right', #pixel length of the bar, caption, position
-                           pad=0.1,
+                           pad=1,
                            color='white',
                            frameon=False,
-                           size_vertical=1,
+                           size_vertical=5,
                            fontproperties=fm.FontProperties(size=18))
         ax.add_artist(scalebar)
 
