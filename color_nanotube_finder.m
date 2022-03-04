@@ -1,6 +1,7 @@
 (*Get the working directory via input
 Expect the current directory to have a directory named Images, which contaiens a folder for each image day(which should be inputed), containing a bunch of folders*)
 MainDirec = SetDirectory[Directory[] <> "\\Images\\" <> ToString[Input["Input the directory path to folder of images to anylyze from the Images folder: "]]];
+ImageTypes = {"full", "green", "blue"}
 
 Print["Loading Files..."]
 (*Find folders in the current directory*)
@@ -13,7 +14,7 @@ NumImages = ParallelTable[Length[ColorFiles[[i]]], {i, NumFolders}]
 
 ColorImages = ParallelTable[Import[ColorFiles[[i, j]]], {i, NumFolders}, {j, NumImages[[i]]}];
 
-Print["Separating images into 3 main colors and binarizing..."] (*Threholding happens at 50% gray level*)
+Print["Separating images into 3 main colors and binarizing..."] (*Threholding happens at 40% gray level*)
 TubeBinary = <|
     "full" -> ParallelTable[Binarize[ImageData /@ ColorDistance[ColorImages[[i, j]], RGBColor[0.3, 0.3, 0.3]], {0.4, 1}], {i, NumFolders}, {j, NumImages[[i]]}],
     "green" -> ParallelTable[Binarize[ColorNegate[ImageData /@ ColorDistance[ColorImages[[i, j]], RGBColor[1, 0.3, 0.3]]], {0.4, 1}], {i, NumFolders}, {j, NumImages[[i]]}],
@@ -33,17 +34,15 @@ ImageBaseFileNames = ParallelTable[FileBaseName[ImageFileNames[[i, j]]], {i, Num
 
 Print["Exporting highlighted images as jpgs..."]
 ParallelTable[Quiet[CreateDirectory[BaseFolders[[i]] <> "\\Highlited Color Nanotubes"]], {i, NumFolders}]
-ParallelTable[Export[BaseFolders[[i]] <> "\\Highlited Color Nanotubes\\" <> ImageBaseFileNames[[i, j]] <> " full.jpg", HighlightNT[["full", i, j]]], {i, NumFolders}, {j, NumImages[[i]]}]
-ParallelTable[Export[BaseFolders[[i]] <> "\\Highlited Color Nanotubes\\" <> ImageBaseFileNames[[i, j]] <> " green.jpg", HighlightNT[["green", i, j]]], {i, NumFolders}, {j, NumImages[[i]]}]
-ParallelTable[Export[BaseFolders[[i]] <> "\\Highlited Color Nanotubes\\" <> ImageBaseFileNames[[i, j]] <> " blue.jpg", HighlightNT[["blue", i, j]]], {i, NumFolders}, {j, NumImages[[i]]}]
+Table[Export[BaseFolders[[i]] <> "\\Highlited Color Nanotubes\\" <> ImageBaseFileNames[[i, j]] <> " " <> type <> ".jpg", HighlightNT[[type, i, j]]], {type, ImageTypes}, {i, NumFolders}, {j, NumImages[[i]]}]
 
 Print["Exporting nanotube location data in excel"]
 Data = <|"full" -> {}, "green" -> {}, "blue" -> {}|>
-Table[Data[[type]] = Append[Data[[type]], {}], {type, {"full", "green", "blue"}}, {i, NumFolders}]
+Table[Data[[type]] = Append[Data[[type]], {}], {type, ImageTypes}, {i, NumFolders}]
 Table[Quiet[Data[[type, i]] = Append[Data[[type, i]], ImageBaseFileNames[[i,j]] -> Prepend[Transpose[{
     NTFind[[type, i, j, All, 1, 1, 1]], (*bottom left x pos*)
     NTFind[[type, i, j, All, 1, 1, 2]], (*bottom left y pos*)
     NTFind[[type, i, j, All, 1, 2, 1]], (*top right x pos*)
     NTFind[[type, i, j, All, 1, 2, 2]] (*top right y pos*)
-}], {"bottom left x pos", "bottom left y pos", "top right x pos", "top right y pos"}]]], {type, {"full", "green", "blue"}}, {i, NumFolders}, {j, NumImages[[i]]}]
-Table[Export[BaseFolders[[i]] <> "\\Location Data "  <> type <> ".xls", Data[[type, i]]], {type, {"full", "green", "blue"}}, {i, NumFolders}]
+}], {"bottom left x pos", "bottom left y pos", "top right x pos", "top right y pos"}]]], {type, ImageTypes}, {i, NumFolders}, {j, NumImages[[i]]}]
+Table[Export[BaseFolders[[i]] <> "\\Location Data "  <> type <> ".xls", Data[[type, i]]], {type, ImageTypes}, {i, NumFolders}]
