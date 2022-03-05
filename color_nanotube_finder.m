@@ -1,3 +1,4 @@
+SetOptions[$Output, FormatType -> OutputForm]
 (*Get the working directory via input
 Expect the current directory to have a directory named Images, which contaiens a folder for each image day(which should be inputed), containing a bunch of folders*)
 MainDirec = SetDirectory[Directory[] <> "\\Images\\" <> ToString[Input["Input the directory path to folder of images to anylyze from the Images folder: "]]];
