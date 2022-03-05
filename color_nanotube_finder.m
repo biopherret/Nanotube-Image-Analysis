@@ -14,7 +14,7 @@ NumImages = ParallelTable[Length[ColorFiles[[i]]], {i, NumFolders}]
 
 ColorImages = ParallelTable[Import[ColorFiles[[i, j]]], {i, NumFolders}, {j, NumImages[[i]]}];
 
-Print["Separating images into 3 main colors and binarizing..."] (*Threholding happens at 40% gray level*)
+Print["Separating images into 3 main colors and binarizing..."] (*Threholding happens at 50% gray level*)
 TubeBinary = <|
     "full" -> ParallelTable[Binarize[ImageData /@ ColorDistance[ColorImages[[i, j]], RGBColor[0.22, 0.22, 0.22]], {0.5, 1}], {i, NumFolders}, {j, NumImages[[i]]}],
     "green" -> ParallelTable[Binarize[ColorNegate[ImageData /@ ColorDistance[ColorImages[[i, j]], RGBColor[1, 0.22, 0.22]]], {0.5, 1}], {i, NumFolders}, {j, NumImages[[i]]}],
@@ -22,7 +22,7 @@ TubeBinary = <|
 |>
 
 Print["Finding nanotubes in each binarized image..."]
-NTFind = (ParallelTable[Values[ComponentMeasurements[#[[i, j]], {"BoundingBox", "Shape"}, 240 < #Area  < 2000 &]], {i, NumFolders}, {j, NumImages[[i]]}]) &/@ TubeBinary
+NTFind = (ParallelTable[Values[ComponentMeasurements[#[[i, j]], {"BoundingBox", "Count"}, 240 < #Area  < 2000 &]], {i, NumFolders}, {j, NumImages[[i]]}]) &/@ TubeBinary
 
 Print["Adding highlights to the original color images..."]
 HighlightNT = (ParallelTable[HighlightImage[ColorImages[[i, j]], Rectangle @@@ #[[i, j, All, 1]]], {i, NumFolders}, {j, NumImages[[i]]}]) &/@ NTFind
@@ -42,10 +42,7 @@ Table[Quiet[Data[[type, i]] = Append[Data[[type, i]], ImageBaseFileNames[[i,j]] 
     NTFind[[type, i, j, All, 1, 1, 1]], (*bottom left x pos*)
     NTFind[[type, i, j, All, 1, 1, 2]], (*bottom left y pos*)
     NTFind[[type, i, j, All, 1, 2, 1]], (*top right x pos*)
-    NTFind[[type, i, j, All, 1, 2, 2]] (*top right y pos*)
-}], {"bottom left x pos", "bottom left y pos", "top right x pos", "top right y pos"}]]], {type, ImageTypes}, {i, NumFolders}, {j, NumImages[[i]]}]
+    NTFind[[type, i, j, All, 1, 2, 2]], (*top right y pos*)
+    NTFind[[type, i, j, All, 2]] (*pixel count*)
+}], {"bottom left x pos", "bottom left y pos", "top right x pos", "top right y pos", "pixel count"}]]], {type, ImageTypes}, {i, NumFolders}, {j, NumImages[[i]]}]
 Table[Export[BaseFolders[[i]] <> "\\Location Data "  <> type <> ".xls", Data[[type, i]]], {type, ImageTypes}, {i, NumFolders}]
-
-Print["Exporting shape images..."]
-ParallelTable[Quiet[CreateDirectory[BaseFolders[[i]] <> "\\Shape Images"]], {i, NumFolders}]
-Table[Export[BaseFolders[[i]] <> "\\Shape Images\\" <> ImageBaseFileNames[[i, j]] <> " " <> type <> ".jpg", NTFind[[type, i, j, All, 2]]], {type, ImageTypes}, {i, NumFolders}, {j, NumImages[[i]]}]
