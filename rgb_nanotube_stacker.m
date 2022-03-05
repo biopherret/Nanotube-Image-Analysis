@@ -1,6 +1,7 @@
 (*Get the working directory via input
 Expect the current directory to have a directory named Images, which contaiens a folder for each image day(which should be inputed), containing a bunch of folders*)
 MainDirec = SetDirectory[Directory[] <> "\\Images\\" <> ToString[Input["Input the directory path to folder of images to anylyze from the Images folder: "]]];
+ImageTypes = {"green", "blue"}
 
 Print["Loading Files..."]
 (*Find folders in the current directory*)
@@ -22,17 +23,16 @@ Print["Increacing contrast and croping images..."]
 (*Increase contrast and crop both blue and green images 
 Crop is necessary b/c images in blue and green are offset slightly 
 Brightness increase value is different between images b/c blue imaging takes brighter images*)
-(*250, 400*)
-UnModImages = <|
+RAWImages = <|
     "green" -> ParallelTable[Import[Files[["green", i, j]]], {i, NumFolders}, {j, NumImages[[i]]}],
     "blue" -> ParallelTable[Import[Files[["blue", i, j]]], {i, NumFolders}, {j, NumImages[[i]]}]
 |>
-MedianPixelValues = (ParallelTable[ImageMeasurements[#[[i]], "Median"], {i, NumFolders}]) &/@ UnModImages
+MedianPixelValues = (ParallelTable[ImageMeasurements[#[[i]], "Median"], {i, NumFolders}]) &/@ RAWImages
 
 (*0.4/Median brightness adjust sets the background image brighness to 0.4 for both images*)
 Images = <|
-    "green" -> ParallelTable[ImageCrop[UnModImages[["green", i, j]]*(0.4/MedianPixelValues[["green", i, j]]), {1354, 1030}, {Left, Bottom}], {i, NumFolders}, {j, NumImages[[i]]}],
-    "blue" -> ParallelTable[ImageCrop[UnModImages[["blue", i, j]]*(0.4/MedianPixelValues[["blue", i, j]]), {1354, 1030}, {Right, Top}], {i, NumFolders}, {j, NumImages[[i]]}]
+    "green" -> ParallelTable[ImageCrop[RAWImages[["green", i, j]]*(0.4/MedianPixelValues[["green", i, j]]), {1354, 1030}, {Left, Bottom}], {i, NumFolders}, {j, NumImages[[i]]}],
+    "blue" -> ParallelTable[ImageCrop[RAWImages[["blue", i, j]]*(0.4/MedianPixelValues[["blue", i, j]]), {1354, 1030}, {Right, Top}], {i, NumFolders}, {j, NumImages[[i]]}]
 |>
 
 Print["Creating composit images..."]
