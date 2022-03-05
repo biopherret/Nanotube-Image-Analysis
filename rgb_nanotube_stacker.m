@@ -22,11 +22,19 @@ Print["Increacing contrast and croping images..."]
 (*Increase contrast and crop both blue and green images 
 Crop is necessary b/c images in blue and green are offset slightly 
 Brightness increase value is different between images b/c blue imaging takes brighter images*)
-Images = <|
-    "green" -> ParallelTable[ImageCrop[Import[Files[["green", i, j]]]*250, {1354, 1030}, {Left, Bottom}], {i, NumFolders}, {j, NumImages[[i]]}],
-    "blue" -> ParallelTable[ImageCrop[Import[Files[["blue", i, j]]]*400, {1354, 1030}, {Right, Top}], {i, NumFolders}, {j, NumImages[[i]]}]
+(*250, 400*)
+UnModImages = <|
+    "green" -> ParallelTable[Import[Files[["green", i, j]]], {i, NumFolders}, {j, NumImages[[i]]}],
+    "blue" -> ParallelTable[Import[Files[["blue", i, j]]], {i, NumFolders}, {j, NumImages[[i]]}]
 |>
-
+MedianPixelValues = (ParallelTable[ImageMeasurements[#[[i]], "Median"], {i, NumFolders}]) &/@ UnModImages
+Print[MedianPixelValues]
+(*0.4/Median brightness adjust sets the background image brighness to 0.4 for both images*)
+Images = <|
+    "green" -> ParallelTable[ImageCrop[UnModImages[["green", i, j]]*(0.4/MedianPixelValues[["green", i, j]]), {1354, 1030}, {Left, Bottom}], {i, NumFolders}, {j, NumImages[[i]]}],
+    "blue" -> ParallelTable[ImageCrop[UnModImages[["blue", i, j]]*(0.4/MedianPixelValues[["blue", i, j]]), {1354, 1030}, {Right, Top}], {i, NumFolders}, {j, NumImages[[i]]}]
+|>
+Print[(ParallelTable[ImageMeasurements[#[[i]], "Median"], {i, NumFolders}]) &/@ Images]
 Print["Creating composit images..."]
 (*RBG stack green and blue fluorescence images 
 green image in the red channel, blue image in the green and blue channel
