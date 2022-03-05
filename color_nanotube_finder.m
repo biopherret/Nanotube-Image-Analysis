@@ -22,7 +22,7 @@ TubeBinary = <|
 |>
 
 Print["Finding nanotubes in each binarized image..."]
-NTFind = (ParallelTable[Values[ComponentMeasurements[#[[i, j]], {"BoundingBox", "Count"}, 240 < #Area  < 2000 &]], {i, NumFolders}, {j, NumImages[[i]]}]) &/@ TubeBinary
+NTFind = (ParallelTable[Values[ComponentMeasurements[#[[i, j]], {"BoundingBox", "Count"}, 200 < #Area  < 2000 &]], {i, NumFolders}, {j, NumImages[[i]]}]) &/@ TubeBinary
 
 Print["Adding highlights to the original color images..."]
 HighlightNT = (ParallelTable[HighlightImage[ColorImages[[i, j]], Rectangle @@@ #[[i, j, All, 1]]], {i, NumFolders}, {j, NumImages[[i]]}]) &/@ NTFind
