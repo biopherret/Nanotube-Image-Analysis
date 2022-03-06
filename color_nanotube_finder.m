@@ -25,6 +25,7 @@ TubeBinary = <|
 
 Print["Finding nanotubes in each binarized image..."]
 NTFind = (ParallelTable[Values[ComponentMeasurements[#[[i, j]], {"BoundingBox", "Count"}, 200 < #Area  < 2000 &]], {i, NumFolders}, {j, NumImages[[i]]}]) &/@ TubeBinary
+Print[NTFind[["blue", 1, 1]]]
 
 Print["Adding highlights to the original color images..."]
 HighlightNT = (ParallelTable[HighlightImage[ColorImages[[i, j]], Rectangle @@@ #[[i, j, All, 1]]], {i, NumFolders}, {j, NumImages[[i]]}]) &/@ NTFind
@@ -42,7 +43,7 @@ SetSharedVariable[counter]
 Table[Export[BaseFolders[[i]] <> "\\Highlited Color Nanotubes\\" <> ImageBaseFileNames[[i, j]] <> " " <> type <> ".jpg", HighlightNT[[type, i, j]]]; counter += 1; If[Mod[counter, 10] == 0, Print[ToString[Progress[counter]] <> "% of images exported"]], {type, ImageTypes}, {i, NumFolders}, {j, NumImages[[i]]}]
 
 Print["Exporting nanotube location data in excel..."]
-ParallelTable[Quiet[CreateDirectory[BaseFolders[[i]] <> "\\Nanotube Location Data"]], {i, NumFolders}]
+ParallelTable[Quiet[CreateDirectory[BaseFolders[[i]] <> "\\Location Data"]], {i, NumFolders}]
 Data = <|"full" -> {}, "green" -> {}, "blue" -> {}|>
 Table[Data[[type]] = Append[Data[[type]], {}], {type, ImageTypes}, {i, NumFolders}]
 Table[Quiet[Data[[type, i]] = Append[Data[[type, i]], ImageBaseFileNames[[i,j]] -> Prepend[Transpose[{
@@ -52,4 +53,4 @@ Table[Quiet[Data[[type, i]] = Append[Data[[type, i]], ImageBaseFileNames[[i,j]] 
     NTFind[[type, i, j, All, 1, 2, 2]], (*top right y pos*)
     NTFind[[type, i, j, All, 2]] (*pixel count*)
 }], {"bottom left x pos", "bottom left y pos", "top right x pos", "top right y pos", "pixel count"}]]], {type, ImageTypes}, {i, NumFolders}, {j, NumImages[[i]]}]
-Table[Export[BaseFolders[[i]] <> "\\Nanotube Location Data\\Location Data "  <> type <> ".xls", Data[[type, i]]], {type, ImageTypes}, {i, NumFolders}]
+Table[Export[BaseFolders[[i]] <> "\\Location Data\\Location Data "  <> type <> ".xls", Data[[type, i]]], {type, ImageTypes}, {i, NumFolders}]
