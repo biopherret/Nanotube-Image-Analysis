@@ -48,7 +48,7 @@ Print["Exporting color images as tifs..."]
 ParallelTable[Quiet[CreateDirectory[BaseFolders[[i]] <> "\\RGB Stacks tif"]], {i, NumFolders}]
 ParallelTable[Quiet[CreateDirectory[BaseFolders[[i]] <> "\\RGB Stacks jpg"]], {i, NumFolders}]
 TotalImages = Sum[NumImages[[i]], {i, NumFolders}]
-Progress[x_] = N[x/TotalImages]*100
+Progress[x_] = N[x/TotalImages, 2]*100
 counter = 0
 SetSharedVariable[counter]
 ParallelTable[Export[BaseFolders[[i]] <> "\\RGB Stacks tif\\" <> ImageBaseFileNames[[i, j]] <> ".tif", ColorImages[[i, j]]]; counter += 1; If[Mod[counter, 10] == 0, Print[ToString[Progress[counter]] <> "% of tif images exported"]], {i, NumFolders}, {j, NumImages[[i]]}]
