@@ -1,4 +1,5 @@
 SetOptions[$Output, FormatType -> OutputForm]
+SetSharedFunction[Print]
 (*Get the working directory via input
 Expect the current directory to have a directory named Images, which contaiens a folder for each image day(which should be inputed), containing a bunch of folders*)
 MainDirec = SetDirectory[Directory[] <> "\\Images\\" <> ToString[Input["Input the directory path to folder of images to anylyze from the Images folder: "]]];
@@ -34,9 +35,13 @@ ImageBaseFileNames = ParallelTable[FileBaseName[ImageFileNames[[i, j]]], {i, Num
 
 Print["Exporting highlighted images as jpgs..."]
 ParallelTable[Quiet[CreateDirectory[BaseFolders[[i]] <> "\\Highlited Color Nanotubes"]], {i, NumFolders}]
-Table[Export[BaseFolders[[i]] <> "\\Highlited Color Nanotubes\\" <> ImageBaseFileNames[[i, j]] <> " " <> type <> ".jpg", HighlightNT[[type, i, j]]], {type, ImageTypes}, {i, NumFolders}, {j, NumImages[[i]]}]
+TotalImages = Sum[NumImages[[i]], {i, NumFolders}] * 3
+Progress[x_] = N[x/TotalImages, 2]*100
+counter = 0
+SetSharedVariable[counter]
+Table[Export[BaseFolders[[i]] <> "\\Highlited Color Nanotubes\\" <> ImageBaseFileNames[[i, j]] <> " " <> type <> ".jpg", HighlightNT[[type, i, j]]]; counter += 1; If[Mod[counter, 10] == 0, Print[ToString[Progress[counter]] <> "% of images exported"]], {type, ImageTypes}, {i, NumFolders}, {j, NumImages[[i]]}]
 
-Print["Exporting nanotube location data in excel"]
+Print["Exporting nanotube location data in excel..."]
 Data = <|"full" -> {}, "green" -> {}, "blue" -> {}|>
 Table[Data[[type]] = Append[Data[[type]], {}], {type, ImageTypes}, {i, NumFolders}]
 Table[Quiet[Data[[type, i]] = Append[Data[[type, i]], ImageBaseFileNames[[i,j]] -> Prepend[Transpose[{
