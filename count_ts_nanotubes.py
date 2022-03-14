@@ -1,9 +1,6 @@
-from csv import excel
-from email.errors import InvalidMultipartContentTransferEncodingDefect
 import os
 import pandas as pd
 import numpy as np
-
 
 def is_in(tube: np.array, full_tube: np.array):
     '''given a sub tube (RE or SE) and a full tube, 
