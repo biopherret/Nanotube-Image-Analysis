@@ -14,31 +14,43 @@ Print["Loading Files..."]
 BaseFolders = Flatten[FileNames[All, MainDirec]] (*find folders in the current directory*)
 NumFolders = Length[BaseFolders]
 RAWFolders = ParallelTable[BaseFolders[[i]] <> "\\RAW", {i, NumFolders}] (*get the RAW folder directory*)
-Files = ParallelTable[Flatten[Select[FileNames[All, RAWFolders[[i]]], StringMatchQ[#, __ ~~ "tif"] &]], {i, NumFolders}] (*load all tif files*)
-NumImages = ParallelTable[Length[Files[[i]]], {i, NumFolders}]
+(*For two sided tubes make sure images taken under green fluorescence have "green" in their file name,same for blue fluorescence 
+First part of the file name for images to be grouped must be the same so images get paired properly*)
+Files = If[Sidedness == "os", 
+    ParallelTable[Flatten[Select[FileNames[All, RAWFolders[[i]]], StringMatchQ[#, __ ~~ "tif"] &]], {i, NumFolders}], 
+    <|
+        "green" -> ParallelTable[Flatten[Select[FileNames["*green*", RAWFolders[[i]]], StringMatchQ[#, __ ~~ "tif"] &]], {i, NumFolders}],
+        "blue" -> ParallelTable[Flatten[Select[FileNames["*blue*", RAWFolders[[i]]], StringMatchQ[#, __ ~~ "tif"] &]], {i, NumFolders}]
+    |>]
+NumImages = If[Sidedness == "os", ParallelTable[Length[Files[[i]]], {i, NumFolders}], ParallelTable[Length[Files[["green", i]]], {i, NumFolders}]]
 ImageFileNames = ParallelTable[Flatten[FileNames[All, RAWFolders[[i]]]], {i, NumFolders}] (*get the Image file names w/ file path*)
-ImageBaseFileNames = ParallelTable[FileBaseName[ImageFileNames[[i, j]]], {i, NumFolders}, {j, NumImages[[i]]}] (*get just the file names*)
+ImageBaseFileNames = If[Sidedness == "os", (*get just the file names*)
+    ParallelTable[FileBaseName[ImageFileNames[[i, j]]], {i, NumFolders}, {j, NumImages[[i]]}],
+    ParallelTable[StringDelete[FileBaseName[ImageFileNames[[i, j]]], " blue"], {i, NumFolders}, {j, 1, NumImages[[i]] * 2, 2}]] 
 
 Print["Increacing contrast and croping images..."]
 (*Explination of how the adjust parameters work in lab notes*)
 AdjustParams = Quiet[Solve[(b + 1) (c + 1) d^g - c/2 == FinalMedian && (b + 1) (c + 1) m^g - c/2 == FinalMax, {b, c}]]
 b[d_, m_] = AdjustParams[[1,1,2]]
 c[d_, m_] = AdjustParams[[1,2,2]]
+Print["get raw images"]
+RAWImages = If[Sidedness == "os", (*load and crop images*)
+    ParallelTable[ImageCrop[Import[Files[[i, j]]], {1354, 1030}, {Left, Bottom}], {i, NumFolders}, {j, NumImages[[i]]}],
+    <|
+    "green" -> ParallelTable[ImageCrop[Import[Files[["green", i, j]]], {1354, 1030}, {Left, Bottom}], {i, NumFolders}, {j, NumImages[[i]]}],
+    "blue" -> ParallelTable[ImageCrop[Import[Files[["blue", i, j]]], {2354, 1030}, {Left, Bottom}], {i, NumFolders}, {j, NumImages[[i]]}]
+    |>]
+Print["get pixel value"]
+PixelValues = If[Sidedness == "os", (*find median and max pixel values of pre adjusted iamges*)
+    ParallelTable[ImageMeasurements[RAWImages[[i, j]], {"Median", "Max"}], {i, NumFolders}, {j, NumImages[[i]]}],
+    (ParallelTable[ImageMeasurements[#[[i]], {"Median", "Max"}], {i, NumFolders}]) &/@ RAWImages]
+Print["adjust images"]
+Print[PixelValues[["green", 1, 1]]]
+AdjustImages = If[Sidedness == "os",
+    ParallelTable[ImageAdjust[RAWImages[[i,j]], {c[PixelValues[[i,j,1]], PixelValues[[i,j,2]]], b[PixelValues[[i,j,1]], PixelValues[[i,j,2]]], 2}], {i, NumFolders}, {j, NumImages[[i]]}],
+    <|
+        "green" -> ParallelTable[ImageAdjust[RAWImages[["green",i,j]], {c[PixelValues[["green",i,j,1]], PixelValues[["green", i,j,2]]], b[PixelValues[["green",i,j,1]], PixelValues[["green", i,j,2]]], 2}], {i, NumFolders}, {j, NumImages[[i]]}],
+        "blue" -> ParallelTable[ImageAdjust[RAWImages[["blue",i,j]], {c[PixelValues[["blue", i,j,1]], PixelValues[["blue", i,j,2]]], b[PixelValues[["blue", i,j,1]], PixelValues[["blue", i,j,2]]], 2}], {i, NumFolders}, {j, NumImages[[i]]}]
+    |>]
 
-RAWImages = ParallelTable[ImageCrop[Import[Files[[i, j]]], {1354, 1030}, {Left, Bottom}], {i, NumFolders}, {j, NumImages[[i]]}] (*load and crop images*)
-MedianPixelValues = ParallelTable[ImageMeasurements[RAWImages[[i, j]], "Median"], {i, NumFolders}, {j, NumImages[[i]]}] (*find median and max pixel values of pre adjusted iamges*)
-MaxPixelValues = ParallelTable[ImageMeasurements[RAWImages[[i, j]], "Max"], {i, NumFolders}, {j, NumImages[[i]]}]
-AdjustImages = ParallelTable[ImageAdjust[RAWImages[[i,j]], {c[MedianPixelValues[[i,j]], MaxPixelValues[[i,j]]], b[MedianPixelValues[[i,j]], MaxPixelValues[[i,j]]], 2}], {i, NumFolders}, {j, NumImages[[i]]}]
 
-Print["Exporting adjusted images as jpgs..."]
-ParallelTable[Quiet[CreateDirectory[BaseFolders[[i]] <> "\\Adjust"]], {i, NumFolders}]
-TotalImages = Sum[NumImages[[i]], {i, NumFolders}]
-Progress[x_] = ToIntN[x/TotalImages, 2]*100
-counter = 0
-SetSharedVariable[counter]
-ParallelTable[Export[BaseFolders[[i]] <> "\\Adjust\\" <> ImageBaseFileNames[[i, j]] <> ".jpg", Images[[i, j]]]; counter += 1; If[Mod[counter, 10] == 0, Print[ToString[Progress[counter]] <> "% of adjusted images exported"]], {i, NumFolders}, {j, NumImages[[i]]}]
-
-
-
-(*For two sided tubes make sure images taken under green fluorescence have "green" in their file name,same for blue fluorescence 
-First part of the file name for images to be grouped must be the same so images get paired properly*)
