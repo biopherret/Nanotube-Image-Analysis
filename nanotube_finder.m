@@ -8,7 +8,7 @@ Sidedness = ToString[Input["ts or os tubes?: "]]
 (*Hardcoded Inputs*)
 g = 2
 FinalMedian = 0.22
-FinalMax = 1.6
+FinalMax = 4.5
 
 Print["Loading Files..."]
 BaseFolders = Flatten[FileNames[All, MainDirec]] (*find folders in the current directory*)
@@ -69,3 +69,26 @@ Print["Exporting color images as jpgs..."]
 counter = 0
 ParallelTable[Export[BaseFolders[[i]] <> "\\RGB Stacks jpg\\" <> ImageBaseFileNames[[i, j]] <> ".jpg", ColorImages[[i, j]]]; counter += 1; If[Mod[counter, 10] == 0, Print[ToString[Progress[counter]] <> "% of jpg images exported"]], {i, NumFolders}, {j, NumImages[[i]]}]
 
+ImageTypes = {"full", "green", "blue"}
+Print["Separating images into 3 main colors and binarizing..."] (*Threholding happens at 50% gray level*)
+TubeBinary = <|
+    "full" -> ParallelTable[Binarize[ImageData /@ ColorDistance[ColorImages[[i, j]], RGBColor[FinalMedian, FinalMedian, FinalMedian]], {0.5, 1}], {i, NumFolders}, {j, NumImages[[i]]}],
+    "green" -> ParallelTable[Binarize[ColorNegate[ImageData /@ ColorDistance[ColorImages[[i, j]], RGBColor[1, FinalMedian, 0.5 + 0.5*FinalMedian]]], {0.5, 1}], {i, NumFolders}, {j, NumImages[[i]]}],
+    "blue" -> ParallelTable[Binarize[ColorNegate[ImageData /@ ColorDistance[ColorImages[[i, j]], RGBColor[0.7, 1, 0.7]]], {0.5, 1}], {i, NumFolders}, {j, NumImages[[i]]}]
+|>
+
+Print["Finding nanotubes in each binarized image..."]
+NTFind = (ParallelTable[Values[ComponentMeasurements[#[[i, j]], {"BoundingBox", "Count"}, 200 < #Area  < 2000 &]], {i, NumFolders}, {j, NumImages[[i]]}]) &/@ TubeBinary
+
+Print["Adding highlights to the original color images..."]
+HighlightNT = (ParallelTable[HighlightImage[ColorImages[[i, j]], Rectangle @@@ #[[i, j, All, 1]]], {i, NumFolders}, {j, NumImages[[i]]}]) &/@ NTFind
+
+Print["Exporting highlighted images as jpgs..."]
+ParallelTable[Quiet[CreateDirectory[BaseFolders[[i]] <> "\\Highlited Color Nanotubes"]], {i, NumFolders}]
+TotalImages = If[Sidedness == "os", Sum[NumImages[[i]], {i, NumFolders}], Sum[NumImages[[i]], {i, NumFolders}] * 3]
+Progress[x_] = N[x/TotalImages, 2]*100
+counter = 0
+SetSharedVariable[counter]
+If[Sidedness == "os", 
+    Table[Export[BaseFolders[[i]] <> "\\Highlited Color Nanotubes\\" <> ImageBaseFileNames[[i, j]] <> " " <> type <> ".jpg", HighlightNT[[type, i, j]]]; counter += 1; If[Mod[counter, 10] == 0, Print[ToString[Progress[counter]] <> "% of images exported"]], {type, {"full"}}, {i, NumFolders}, {j, NumImages[[i]]}], 
+    Table[Export[BaseFolders[[i]] <> "\\Highlited Color Nanotubes\\" <> ImageBaseFileNames[[i, j]] <> " " <> type <> ".jpg", HighlightNT[[type, i, j]]]; counter += 1; If[Mod[counter, 10] == 0, Print[ToString[Progress[counter]] <> "% of images exported"]], {type, ImageTypes}, {i, NumFolders}, {j, NumImages[[i]]}]]
