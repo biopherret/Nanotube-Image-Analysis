@@ -11,7 +11,7 @@ import os
 #       \Date2
 #           \images folder
 #           \another images folder
-#               \RGB Stacks jpg
+#               \RAW
 #                   image 1
 #                   image 2
 
@@ -38,7 +38,7 @@ for image_file_name in image_files:
 
     #add original image to blank image
     image = plt.imread('{}\{}'.format(org_image_dir, image_file_name))
-    ax.imshow(image, aspect = 'auto')
+    ax.imshow(image, aspect = 'auto', cmap='gray')
 
     #add the scale bar
     scalebar = AnchoredSizeBar(ax.transData,
@@ -46,10 +46,11 @@ for image_file_name in image_files:
                         pad=1,
                        color='white',
                        frameon=False,
-                       size_vertical=5,
-                       fontproperties=fm.FontProperties(size=18))
+                       size_vertical=10,
+                       fontproperties=fm.FontProperties(size=30))
     ax.add_artist(scalebar)
 
     #export scale bar images
-    plt.savefig('{}\{}'.format(new_folder, image_file_name), dip = 72, fromat = 'jpg')
+    image_file_name = image_file_name[0:-4] + '.jpg' #export as jpg
+    plt.savefig('{}\{}'.format(new_folder, image_file_name))
     plt.close()
