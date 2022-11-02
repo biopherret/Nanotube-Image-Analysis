@@ -202,7 +202,7 @@ figs, axs = plt.subplots(num_rows, 6, figsize = (60, 7.5 * int(num_images/6)))
 for im_set in range(num_images):
     i = int(im_set/6)
     j = im_set - i*6
-    axs[i,j].set_title('$\chi^2$ {}'.format(best_images[im_set].chi_square))
+    axs[i,j].set_title('{} $\chi^2$ {:.2f}'.format(image_files[im_set][:-4], best_images[im_set].chi_square))
     for se_cluster in best_images[im_set].good_SE_clusters:
         axs[i,j].scatter(best_images[im_set].SE_points[best_images[im_set].SE_clust_assign == se_cluster,1], best_images[im_set].SE_points[best_images[im_set].SE_clust_assign == se_cluster,0], s = 1, c = '#2ca02c')
 
