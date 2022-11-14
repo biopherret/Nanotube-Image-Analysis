@@ -214,8 +214,8 @@ cwd = os.getcwd()
 new_folder = '{}\\Nanotube finder results'.format(image_dir)
 os.mkdir(new_folder)
 
-green_images = [plt.imread('{}\RAW\{}'.format(image_dir, image_file))[:1030,22:] for image_file in image_files[1::2]] #due to the way samples are imaged, the two images are slightly misaligned so we crop the excess of each
-blue_images = [plt.imread('{}\RAW\{}'.format(image_dir, image_file))[10:,:1354] for image_file in image_files[::2]] #[y-direction, x-direction]
+green_images = [plt.imread('{}\RAW\{}'.format(image_dir, image_file))[:1024,20:] for image_file in image_files[1::2]] #due to the way samples are imaged, the two images are slightly misaligned so we crop the excess of each
+blue_images = [plt.imread('{}\RAW\{}'.format(image_dir, image_file))[16:,:1356] for image_file in image_files[::2]] #[y-direction, x-direction]
 
 initial_guess = (80, 130)
 

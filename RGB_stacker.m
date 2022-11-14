@@ -30,8 +30,8 @@ b[d_, m_] = AdjustParams[[1,1,2]]
 c[d_, m_] = AdjustParams[[1,2,2]]
 
 RAWImages = <| (*load and crop images*)
-    "green" -> ParallelTable[ImageCrop[Import[Files[["green", i, j]]], {1354, 1030}, {Left, Bottom}], {i, NumFolders}, {j, NumImages[[i]]}],
-    "blue" -> ParallelTable[ImageCrop[Import[Files[["blue", i, j]]], {1354, 1030}, {Right, Top}], {i, NumFolders}, {j, NumImages[[i]]}]
+    "green" -> ParallelTable[ImageCrop[Import[Files[["green", i, j]]], {1356, 1024}, {Left, Bottom}], {i, NumFolders}, {j, NumImages[[i]]}],
+    "blue" -> ParallelTable[ImageCrop[Import[Files[["blue", i, j]]], {1356, 1024}, {Right, Top}], {i, NumFolders}, {j, NumImages[[i]]}]
         |>
 PixelValues = (ParallelTable[ImageMeasurements[#[[i]], {"Median", "Max"}], {i, NumFolders}]) &/@ RAWImages (*find median and max pixel values of pre adjusted images*)
 AdjustImages = <| 
