@@ -144,7 +144,7 @@ class cluster_image:
 
         if np.size(self.SE_clust_dim[1]) == 0: #if no points made it to clustering
             self.SE_var_width = 1
-            self.chi_square = 64.0
+            self.chi_square = np.Inf
         else:
             if np.var(self.SE_clust_dim[1]) == 0:
                 self.SE_var_width = 1

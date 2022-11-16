@@ -62,6 +62,7 @@ def custom_minimize(fun, guess, args = (), max_fun_calls = None, bounds = None):
         improved = False
         for dim in range(np.size(guess)):
             for step in [best_par[dim] - 1, best_par[dim] + 1]: #try taking either a step forward or a step backwards in one each dimension
+                print(best_par, best_chi_square)
                 if step >= bounds[dim][0] and step <= bounds[dim][1]: #if the proposed step is inside the given bounds
                     test_par = list(best_par)
                     test_par[dim] = step
@@ -200,7 +201,7 @@ class cluster_image:
         
         if np.size(self.SE_clust_dim[1]) == 0: #if no SE points made it to clustering (ie no clusters are found)
             self.SE_var_width = 1
-            self.chi_square = 64.0
+            self.chi_square = np.Inf
         else:
             if np.var(self.SE_clust_dim[1]) == 0: #if only one cluster is found
                 self.SE_var_width = 1
@@ -209,14 +210,14 @@ class cluster_image:
 
         if np.size(self.RE_clust_dim[1]) == 0: #if no RE points made it to clustering (ie no clusters are found)
             self.RE_var_width = 1
-            self.chi_square = 64.0
+            self.chi_square = np.Inf
         else:
             if np.var(self.RE_clust_dim[1]) == 0: #if only one cluster is found
                 self.RE_var_width = 1
             else:
                 self.RE_var_width =  np.var(self.RE_clust_dim[1])
         
-        if self.chi_square != 64.0:
+        if self.chi_square != np.Inf:
             self.chi_square = np.sum((self.RE_clust_dim[1] - 8)**2 / self.RE_var_width) / len(self.good_RE_clusters) + np.sum((self.SE_clust_dim[1] - 8)**2 / self.SE_var_width) / len(self.good_SE_clusters)
 
 print('Loading images ...')
