@@ -10,6 +10,14 @@ import pandas as pd
 
 plt.style.use('sarah_plt_style.mplstyle')
 
+def educated_guess(blue_images, green_images):
+    blue_ig = [int(np.median(image) * 1.25) for image in blue_images]
+    green_ig = [int(np.median(image) * 1.5) for image in green_images]
+
+    bmin, bmax, gmin, gmax = min(blue_ig) - 10, max(blue_ig) + 10, min(green_ig) - 10, max(green_ig) + 10
+
+    return [(blue_ig[i], green_ig[i]) for i in range(num_images)], bmin, bmax, gmin, gmax
+
 def find_length(x_points : np.array, y_points : np.array):
     '''finds the lengths (aka largest dimension) of a cluster using its x and y point data
 
@@ -188,17 +196,28 @@ class cluster_image:
 
         self.RE_clust_assign, self.SE_clust_assign, self.RE_clust_dim, self.SE_clust_dim, self.good_RE_clusters, self.good_SE_clusters = self.find_clusters() #all cluster assignments of RE pixels and SE pixel
 
-        if np.var(self.RE_clust_dim[1]) == 0: #error handling for when only one cluster is found
-            self.RE_var_width = 1
-        else:
-            self.RE_var_width = np.var(self.RE_clust_dim[1])
-
-        if np.var(self.SE_clust_dim[1]) == 0:
+        self.chi_square = 0
+        
+        if np.size(self.SE_clust_dim[1]) == 0: #if no SE points made it to clustering (ie no clusters are found)
             self.SE_var_width = 1
+            self.chi_square = 64.0
         else:
-            self.SE_var_width = np.var(self.SE_clust_dim[1])
+            if np.var(self.SE_clust_dim[1]) == 0: #if only one cluster is found
+                self.SE_var_width = 1
+            else:
+                self.SE_var_width =  np.var(self.SE_clust_dim[1])
 
-        self.chi_square = np.sum((self.RE_clust_dim[1] - 8)**2 / self.RE_var_width) / len(self.good_RE_clusters) + np.sum((self.SE_clust_dim[1] - 8)**2 / self.SE_var_width) / len(self.good_SE_clusters)
+        if np.size(self.RE_clust_dim[1]) == 0: #if no RE points made it to clustering (ie no clusters are found)
+            self.RE_var_width = 1
+            self.chi_square = 64.0
+        else:
+            if np.var(self.RE_clust_dim[1]) == 0: #if only one cluster is found
+                self.RE_var_width = 1
+            else:
+                self.RE_var_width =  np.var(self.RE_clust_dim[1])
+        
+        if self.chi_square != 64.0:
+            self.chi_square = np.sum((self.RE_clust_dim[1] - 8)**2 / self.RE_var_width) / len(self.good_RE_clusters) + np.sum((self.SE_clust_dim[1] - 8)**2 / self.SE_var_width) / len(self.good_SE_clusters)
 
 print('Loading images ...')
 #change and get current working directory (cwd)
@@ -217,16 +236,14 @@ os.mkdir(new_folder)
 green_images = [plt.imread('{}\RAW\{}'.format(image_dir, image_file))[:1024,20:] for image_file in image_files[1::2]] #due to the way samples are imaged, the two images are slightly misaligned so we crop the excess of each
 blue_images = [plt.imread('{}\RAW\{}'.format(image_dir, image_file))[16:,:1356] for image_file in image_files[::2]] #[y-direction, x-direction]
 
-initial_guess = (80, 130)
-
 ydim, xdim = 1030, 1354 #images are 1354 x 1030 post crop
 num_images = len(green_images)
 
-print('Finding best pixel classification parameters...')
-initial_guess = (80, 130)
-bmin, bmax, gmin, gmax = 70, 90, 120, 140
+print('Making an educated guess for the pixel classification parameters...')
+initial_guesses, bmin, bmax, gmin, gmax = educated_guess(blue_images, green_images)
 
-best_fits = Parallel(n_jobs = -1, verbose = 10)(delayed(custom_minimize)(lambda par, fun, blue, green : cluster_image(fun(par, blue, green)).chi_square, initial_guess, args=(simple_lin_map, blue_images[i], green_images[i]), bounds = ((bmin, bmax), (gmin, gmax))) for i in range(num_images))
+print('Finding best pixel classification parameters...')
+best_fits = Parallel(n_jobs = -1, verbose = 10)(delayed(custom_minimize)(lambda par, fun, blue, green : cluster_image(fun(par, blue, green)).chi_square, initial_guesses[i], args=(simple_lin_map, blue_images[i], green_images[i]), bounds = ((bmin, bmax), (gmin, gmax))) for i in range(num_images))
 
 print('Getting cluster data using best parameters ...')
 best_images = Parallel(n_jobs= -1, verbose = 10)(delayed(cluster_image)(simple_lin_map(best_fits[i], blue_images[i], green_images[i])) for i in range(num_images))
