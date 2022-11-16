@@ -8,6 +8,13 @@ import pandas as pd
 
 plt.style.use('sarah_plt_style.mplstyle')
 
+def educated_guess(green_images):
+    green_ig = [int(np.median(image) * 1.5) for image in green_images]
+
+    gmin, gmax = min(green_ig) - 10, max(green_ig) + 10
+
+    return [[green_ig[i]] for i in range(num_images)], gmin, gmax
+
 def find_length(x_points : np.array, y_points : np.array):
     '''finds the lengths (aka largest dimension) of a cluster using its x and y point data
 
@@ -166,10 +173,13 @@ ydim, xdim = 1030, 1354 #images are 1354 x 1030 post crop
 num_images = len(green_images)
 
 print('Finding best pixel classification parameters...')
-initial_guess = [130]
-gmin, gmax = 80, 140
+#initial_guess = [130]
+#gmin, gmax = 80, 140
 
-best_fits = Parallel(n_jobs = -1, verbose = 10)(delayed(custom_minimize)(lambda par, fun, green : cluster_image(fun(par, green)).chi_square, initial_guess, args=(simple_lin_map, green_images[i]), bounds = [(gmin, gmax)]) for i in range(num_images))
+initial_guesses, gmin, gmax = educated_guess(green_images)
+print(initial_guesses)
+
+best_fits = Parallel(n_jobs = -1, verbose = 10)(delayed(custom_minimize)(lambda par, fun, green : cluster_image(fun(par, green)).chi_square, initial_guesses[i], args=(simple_lin_map, green_images[i]), bounds = [(gmin, gmax)]) for i in range(num_images))
 
 print(best_fits)
 
