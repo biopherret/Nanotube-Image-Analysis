@@ -176,17 +176,11 @@ green_images = [plt.imread('{}\RAW\{}'.format(image_dir, image_file))[:1030,22:]
 ydim, xdim = 1030, 1354 #images are 1354 x 1030 post crop
 num_images = len(green_images)
 
-print('Finding best pixel classification parameters...')
-#initial_guess = [130]
-#gmin, gmax = 80, 140
-
+print('Making an educated guess for the pixel classification parameters...')
 initial_guesses, gmin, gmax = educated_guess(green_images)
-print(initial_guesses)
 
+print('Finding best pixel classification parameters...')
 best_fits = Parallel(n_jobs = -1, verbose = 10)(delayed(custom_minimize)(lambda par, fun, green : cluster_image(fun(par, green)).chi_square, initial_guesses[i], args=(simple_lin_map, green_images[i]), bounds = [(gmin, gmax)]) for i in range(num_images))
-
-print(best_fits)
-
 
 print('Getting cluster data using best parameters ...')
 best_images = Parallel(n_jobs= -1, verbose = 10)(delayed(cluster_image)(simple_lin_map(best_fits[i], green_images[i])) for i in range(num_images))
