@@ -61,7 +61,11 @@ def custom_minimize(fun, guess, args = (), max_fun_calls = None, bounds = None):
     while improved and not stop:
         improved = False
         for dim in range(np.size(guess)):
-            for step in [best_par[dim] - 1, best_par[dim] + 1]: #try taking either a step forward or a step backwards in one each dimension
+            if best_chi_square == np.Inf:
+                step_size = 5
+            else:
+                step_size = 1
+            for step in [best_par[dim] - step_size, best_par[dim] + step_size]: #try taking either a step forward or a step backwards in one each dimension
                 print(best_par, best_chi_square)
                 if step >= bounds[dim][0] and step <= bounds[dim][1]: #if the proposed step is inside the given bounds
                     test_par = list(best_par)
