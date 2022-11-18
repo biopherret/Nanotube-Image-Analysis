@@ -280,7 +280,8 @@ figs, axs = plt.subplots(num_rows, 6, figsize = (60, 7.5 * int(num_images/6)))
 for im_set in range(num_images):
     i = int(im_set/6)
     j = im_set - i*6
-    axs[i,j].set_title('{} $\chi^2$ {:.2f}'.format(image_files[im_set][:-4], best_images[im_set].chi_square))
+    image_name = image_files[1::2][im_set][:-10]
+    axs[i,j].set_title('{} $\chi^2$ {:.2f}'.format(image_name, best_images[im_set].chi_square))
     for re_cluster in best_images[im_set].good_RE_clusters:
         axs[i,j].scatter(best_images[im_set].RE_points[best_images[im_set].RE_clust_assign == re_cluster,1], best_images[im_set].RE_points[best_images[im_set].RE_clust_assign == re_cluster,0], s = 1, c = '#1f77b4')
 
