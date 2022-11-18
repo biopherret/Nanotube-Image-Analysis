@@ -134,8 +134,15 @@ class cluster_image:
         except:
             clusters_SE = np.ones(len(self.SE_points))
 
-        num_RE_clust = max(clusters_RE) + 1 #assignments are from 0 to max_num so the total number of clusters is max_num + 1
-        num_SE_clust = max(clusters_SE) + 1
+        if np.size(clusters_RE) == 0:
+            num_RE_clust = 0
+        else:
+            num_RE_clust = max(clusters_RE) + 1 #assignments are from 0 to max_num so the total number of clusters is max_num + 1
+
+        if np.size(clusters_SE) == 0:
+            num_SE_clust = 0
+        else:
+            num_SE_clust = max(clusters_SE) + 1 #assignments are from 0 to max_num so the total number of clusters is max_num + 1
 
         RE_sizes = np.array([len(self.RE_points[np.where(clusters_RE == num_clust)][:,1]) for num_clust in range(num_RE_clust)]) #find the sizes of each cluster
         SE_sizes = np.array([len(self.SE_points[np.where(clusters_SE == num_clust)][:,1]) for num_clust in range(num_SE_clust)])
