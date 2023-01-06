@@ -48,6 +48,7 @@ AdjustImages = RAWImages
 (*
 Backgrd = Image[ConstantArray[FinalMedian, {1030, 1354}]] (*background to use to fill in channels for the os tubes*)
 *)
+AveragePixelValue = ParallelTable[Mean[{ImageMeasurements[AdjustImages[["green", i, j]], "Mean"], ImageMeasurements[AdjustImages[["blue", i, j]], "Mean"]}], {i, NumFolders}, {j, NumImages[[i]]}]
 ColorImages = ParallelTable[ColorCombine[{AdjustImages[["green", i, j]], AdjustImages[["blue", i, j]], 0.5*AdjustImages[["blue", i, j]] + 0.5*AdjustImages[["green", i, j]]}, "RGB"], {i, NumFolders}, {j, NumImages[[i]]}]
 
 Print["Exporting color images as tifs..."]
