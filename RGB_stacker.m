@@ -34,8 +34,8 @@ c[d_, m_] = AdjustParams[[1,2,2]]
 *)
 
 RAWImages = <| (*load and crop images*)
-    "green" -> ParallelTable[ImageCrop[Import[Files[["green", i, j]]] * 250, {1356, 1024}, {Left, Bottom}], {i, NumFolders}, {j, NumImages[[i]]}],
-    "blue" -> ParallelTable[ImageCrop[Import[Files[["blue", i, j]]] * 400, {1356, 1024}, {Right, Top}], {i, NumFolders}, {j, NumImages[[i]]}]
+    "green" -> ParallelTable[ImageCrop[Import[Files[["green", i, j]]] * 150, {1358, 1024}, {Left, Bottom}], {i, NumFolders}, {j, NumImages[[i]]}],
+    "blue" -> ParallelTable[ImageCrop[Import[Files[["blue", i, j]]] * 450, {1358, 1024}, {Right, Top}], {i, NumFolders}, {j, NumImages[[i]]}]
         |>
 PixelValues = (ParallelTable[ImageMeasurements[#[[i]], {"Median", "Max"}], {i, NumFolders}]) &/@ RAWImages (*find median and max pixel values of pre adjusted images*)
 (*
@@ -48,9 +48,10 @@ AdjustImages = RAWImages
 (*
 Backgrd = Image[ConstantArray[FinalMedian, {1030, 1354}]] (*background to use to fill in channels for the os tubes*)
 *)
-AveragePixelValue = ParallelTable[Mean[{ImageMeasurements[AdjustImages[["green", i, j]], "Mean"], ImageMeasurements[AdjustImages[["blue", i, j]], "Mean"]}], {i, NumFolders}, {j, NumImages[[i]]}]
+ColorImages = ParallelTable[ColorCombine[{AdjustImages[["green", i, j]], AdjustImages[["blue", i, j]], AdjustImages[["blue", i, j]]}, "RGB"], {i, NumFolders}, {j, NumImages[[i]]}]
+(*
 ColorImages = ParallelTable[ColorCombine[{AdjustImages[["green", i, j]], AdjustImages[["blue", i, j]], 0.5*AdjustImages[["blue", i, j]] + 0.5*AdjustImages[["green", i, j]]}, "RGB"], {i, NumFolders}, {j, NumImages[[i]]}]
-
+*)
 Print["Exporting color images as tifs..."]
 ParallelTable[Quiet[CreateDirectory[BaseFolders[[i]] <> "\\RGB Stacks tif"]], {i, NumFolders}]
 ParallelTable[Quiet[CreateDirectory[BaseFolders[[i]] <> "\\RGB Stacks jpg"]], {i, NumFolders}]
