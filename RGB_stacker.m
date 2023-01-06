@@ -5,9 +5,11 @@ Expect the current directory to have a directory named Images, which contaiens a
 MainDirec = SetDirectory[Directory[] <> "\\Images\\" <> ToString[Input["Input the directory path to folder of images to anylyze from the Images folder: "]]];
 
 (*Hardcoded Inputs*)
+(*
 g = 2
 FinalMedian = 0.22
 FinalMax = 4.5
+*)
 
 Print["Loading Files..."]
 BaseFolders = Flatten[FileNames[All, MainDirec]] (*find folders in the current directory*)
@@ -25,23 +27,27 @@ ImageBaseFileNames = ParallelTable[StringDelete[FileBaseName[ImageFileNames[[i, 
 
 Print["Increacing contrast and croping images..."]
 (*Explination of how the adjust parameters work in lab notes*)
+(*
 AdjustParams = Quiet[Solve[(b + 1) (c + 1) d^g - c/2 == FinalMedian && (b + 1) (c + 1) m^g - c/2 == FinalMax, {b, c}]]
 b[d_, m_] = AdjustParams[[1,1,2]]
 c[d_, m_] = AdjustParams[[1,2,2]]
+*)
 
 RAWImages = <| (*load and crop images*)
-    "green" -> ParallelTable[ImageCrop[Import[Files[["green", i, j]]], {1356, 1024}, {Left, Bottom}], {i, NumFolders}, {j, NumImages[[i]]}],
-    "blue" -> ParallelTable[ImageCrop[Import[Files[["blue", i, j]]], {1356, 1024}, {Right, Top}], {i, NumFolders}, {j, NumImages[[i]]}]
+    "green" -> ParallelTable[ImageCrop[Import[Files[["green", i, j]]] * 250, {1356, 1024}, {Left, Bottom}], {i, NumFolders}, {j, NumImages[[i]]}],
+    "blue" -> ParallelTable[ImageCrop[Import[Files[["blue", i, j]]] * 400, {1356, 1024}, {Right, Top}], {i, NumFolders}, {j, NumImages[[i]]}]
         |>
 PixelValues = (ParallelTable[ImageMeasurements[#[[i]], {"Median", "Max"}], {i, NumFolders}]) &/@ RAWImages (*find median and max pixel values of pre adjusted images*)
+(*
 AdjustImages = <| 
         "green" -> ParallelTable[ImageAdjust[RAWImages[["green",i,j]], {c[PixelValues[["green",i,j,1]], PixelValues[["green", i,j,2]]], b[PixelValues[["green",i,j,1]], PixelValues[["green", i,j,2]]], 2}], {i, NumFolders}, {j, NumImages[[i]]}],
         "blue" -> ParallelTable[ImageAdjust[RAWImages[["blue",i,j]], {c[PixelValues[["blue", i,j,1]], PixelValues[["blue", i,j,2]]], b[PixelValues[["blue", i,j,1]], PixelValues[["blue", i,j,2]]], 2}], {i, NumFolders}, {j, NumImages[[i]]}]
             |>
-
-Print["Creating composit images..."]
+*)
+AdjustImages = RAWImages
+(*
 Backgrd = Image[ConstantArray[FinalMedian, {1030, 1354}]] (*background to use to fill in channels for the os tubes*)
-
+*)
 ColorImages = ParallelTable[ColorCombine[{AdjustImages[["green", i, j]], AdjustImages[["blue", i, j]], 0.5*AdjustImages[["blue", i, j]] + 0.5*AdjustImages[["green", i, j]]}, "RGB"], {i, NumFolders}, {j, NumImages[[i]]}]
 
 Print["Exporting color images as tifs..."]
