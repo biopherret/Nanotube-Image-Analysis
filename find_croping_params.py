@@ -42,6 +42,8 @@ def edit_database(quary_str):
     cnxn.commit()
 
 cube_offset_df = run_quary('Select * From cube_offset;').set_index('date_id') #retrieve the cube_offset table from the SQL server
+max_xdim = 1376 #size of images takeing at our microscope pre crop
+max_ydim = 1040
 
 for day in cube_offset_df.index.values.tolist():
     green_x = cube_offset_df.loc[day]['green_x']
@@ -49,17 +51,25 @@ for day in cube_offset_df.index.values.tolist():
     blue_x = cube_offset_df.loc[day]['blue_x']
     blue_y = cube_offset_df.loc[day]['blue_y']
 
-    if green_x >= blue_x: #determine if the right or left side of the green image should be cropped (opposite side of blue is cropped)
-        x_green_dir = 'left'
-    else:
-        x_green_dir = 'right'
+    ydim = int(max_ydim - np.abs(green_y - blue_y)) #determine the new dimentions
+    xdim = int(max_xdim - np.abs(green_x - blue_x))
 
-    if green_y <= blue_y: #determine if the bottom or top side of the green image should be cropped (opposite side of blue is cropped)
-        y_green_dir = 'bottom'
-    else:
-        y_green_dir = 'top'
-    
-    ydim = int(1040 - np.abs(green_y - blue_y)) #determine how much to crop in each dimension
-    xdim = int(1376 - np.abs(green_x - blue_x))
+    edit_database(f'Update cube_offset Set ydim = {ydim}, xdim = {xdim} Where date_id = {day}')
 
-    edit_database(f"Update cube_offset Set ydim = {ydim}, xdim = {xdim}, x_green_dir = '{x_green_dir}', y_green_dir = '{y_green_dir}' Where date_id = {day};") #update the SQL database
+    if green_y < blue_y: #determine if the bottom or top side of the green image should be cropped (opposite side of blue is cropped)
+        green_crop_yend = ydim #crop the bottom off the green image
+        blue_crop_ystart = max_ydim - ydim #crop the top off the blue image
+        edit_database(f'Update cube_offset Set green_crop_yend = {green_crop_yend}, blue_crop_ystart = {blue_crop_ystart} Where date_id = {day}')
+    elif green_y > blue_y: 
+        green_crop_ystart = max_ydim - ydim #crop the top off the green image
+        blue_crop_yend = ydim #crop the bottom off the blue image
+        edit_database(f'Update cube_offset Set green_crop_ystart = {green_crop_ystart}, blue_crop_yend = {blue_crop_yend} Where date_id = {day}')
+
+    if green_x > blue_x: #determine if the right or left side of the green image should be cropped (opposite side of blue is cropped)
+        green_crop_xstart = max_xdim - xdim #crop the left off the green image
+        blue_crop_xend = xdim #crop the right off the blue image
+        edit_database(f'Update cube_offset Set green_crop_xstart = {green_crop_xstart}, blue_crop_xend = {blue_crop_xend} Where date_id = {day}')
+    elif green_x < blue_x:
+        green_crop_xend = xdim #crop the right off the green image
+        blue_crop_xstart = max_xdim - xdim #crop the left off the blue image
+        edit_database(f'Update cube_offset Set green_crop_xend = {green_crop_xend}, blue_crop_xstart = {blue_crop_xstart} Where date_id = {day}')

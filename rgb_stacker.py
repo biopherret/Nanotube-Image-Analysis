@@ -40,10 +40,8 @@ date_key = int(input('Input the name of the image day folder: '))
 cube_offset_df = run_quary(f'Select * From cube_offset Where date_id = {date_key}').set_index('date_id')
 xdim = cube_offset_df.loc[date_key]['xdim']
 ydim = cube_offset_df.loc[date_key]['ydim']
-x_green_dim = cube_offset_df.loc[date_key]['x_green_dir']
-y_green_dim = cube_offset_df.loc[date_key]['y_green_dir']
-max_xdim = 1376 #size of images takeing at our microscope pre crop
-max_ydim = 1040
+green_crop = [cube_offset_df.loc[date_key]['green_crop_ystart'], cube_offset_df.loc[date_key]['green_crop_yend'], cube_offset_df.loc[date_key]['green_crop_xstart'], cube_offset_df.loc[date_key]['green_crop_xend']]
+blue_crop = [cube_offset_df.loc[date_key]['blue_crop_ystart'], cube_offset_df.loc[date_key]['blue_crop_yend'], cube_offset_df.loc[date_key]['blue_crop_xstart'], cube_offset_df.loc[date_key]['blue_crop_xend']]
 
 print('Loading folders ...')
 #change and get current working directory (cwd)
@@ -65,33 +63,29 @@ for folder in base_folders:
     os.mkdir(new_jpg_folder)
     os.mkdir(new_tif_folder)
 
-    if (x_green_dim != 'left') or (y_green_dim != 'bottom'):
-        print('add in the cropping setup for this...')
-        continue
-    else:
-        print('Loading and croping images ...')
-        green_images = [plt.imread(f'{cwd}\{folder}\RAW\{image_file}')[:ydim, max_xdim - xdim:] for image_file in image_files[1::2]] #[y-direction, x-direction]
-        blue_images = [plt.imread(f'{cwd}\{folder}\RAW\{image_file}')[max_ydim - ydim:, :xdim] for image_file in image_files[::2]]
+    print('Loading and croping images ...')
+    green_images = [plt.imread(f'{cwd}\{folder}\RAW\{image_file}')[green_crop[0]:green_crop[1], green_crop[2]:green_crop[3]] for image_file in image_files[1::2]] #[y-direction, x-direction]
+    blue_images = [plt.imread(f'{cwd}\{folder}\RAW\{image_file}')[blue_crop[0]:blue_crop[1], blue_crop[2]:blue_crop[3]] for image_file in image_files[::2]]
 
-        print('Creating and saving RGB Stacks')
-        num_images = len(green_images)
-        for im_set in range(num_images):
-            image_file_name = image_files[1::2][im_set][:-10]
-            new_image = np.stack((green_images[im_set], blue_images[im_set], blue_images[im_set]), axis = 2) #stack the 2 images together
-            ydim = np.shape(new_image)[0] #determine the size of the image to be abel to make the correct size blank figure
-            xdim = np.shape(new_image)[1]
-            inch_per_pixel = 0.014
+    print('Creating and saving RGB Stacks')
+    num_images = len(green_images)
+    for im_set in range(num_images):
+        image_file_name = image_files[1::2][im_set][:-10]
+        new_image = np.stack((green_images[im_set], blue_images[im_set], blue_images[im_set]), axis = 2) #stack the 2 images together
+        ydim = np.shape(new_image)[0] #determine the size of the image to be abel to make the correct size blank figure
+        xdim = np.shape(new_image)[1]
+        inch_per_pixel = 0.014
 
-            fig = plt.figure(frameon = False) #make a figure object that doesn't have the frame
-            fig.set_size_inches(xdim*inch_per_pixel,ydim*inch_per_pixel)
-            ax = plt.Axes(fig, [0,0,1,1])
-            ax.set_axis_off()
-            fig.add_axes(ax) #add an ax that doesn't have the axis elements
-            ax.imshow(new_image, aspect = 'auto') #add the image to the figure
+        fig = plt.figure(frameon = False) #make a figure object that doesn't have the frame
+        fig.set_size_inches(xdim*inch_per_pixel,ydim*inch_per_pixel)
+        ax = plt.Axes(fig, [0,0,1,1])
+        ax.set_axis_off()
+        fig.add_axes(ax) #add an ax that doesn't have the axis elements
+        ax.imshow(new_image, aspect = 'auto') #add the image to the figure
 
-            image_jpg_file_name = image_file_name + '.jpg' #export as jpg
-            plt.savefig('{}\{}'.format(new_jpg_folder, image_jpg_file_name))
+        image_jpg_file_name = image_file_name + '.jpg' #export as jpg
+        plt.savefig('{}\{}'.format(new_jpg_folder, image_jpg_file_name))
 
-            image_tif_file_name = image_file_name + '.tif' #export as tif
-            plt.savefig('{}\{}'.format(new_tif_folder, image_jpg_file_name))
-            plt.close()
+        image_tif_file_name = image_file_name + '.tif' #export as tif
+        plt.savefig('{}\{}'.format(new_tif_folder, image_jpg_file_name))
+        plt.close()
