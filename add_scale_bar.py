@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 import matplotlib.font_manager as fm
 import os
+import numpy as np
 
 #assumes the following path format
 #\Nanotube Image Analysis
@@ -40,15 +41,19 @@ scalebar_len_um = int(input('What is the desired length of the scalebar(um)?: ')
 scalebar_len_pixels = int(scalebar_len_um * pixel_per_micron)
 
 for image_file_name in image_files:
-    #create a 1354 x 1030 pixel, 72 dpi, blank figure with no frame
+    image = plt.imread('{}\{}'.format(org_image_dir, image_file_name))
+    ydim = np.shape(image)[0] #determine the size of the image to be abel to make the correct size blank figure
+    xdim = np.shape(image)[1]
+    inch_per_pixel = 0.014
+
+    #create a 72 dpi, blank figure with no frame
     fig = plt.figure(frameon=False)
-    fig.set_size_inches(18.806,14.306)
+    fig.set_size_inches(xdim*inch_per_pixel,ydim*inch_per_pixel) 
     ax = plt.Axes(fig, [0,0,1,1])
     ax.set_axis_off()
     fig.add_axes(ax)
 
     #add original image to blank image
-    image = plt.imread('{}\{}'.format(org_image_dir, image_file_name))
     ax.imshow(image, aspect = 'auto', cmap='gray')
 
     #add the scale bar
