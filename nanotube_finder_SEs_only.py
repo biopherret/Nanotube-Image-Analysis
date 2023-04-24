@@ -171,7 +171,7 @@ cwd = os.getcwd()
 new_folder = '{}\\Nanotube finder results'.format(image_dir)
 os.mkdir(new_folder)
 
-green_images = [plt.imread('{}\RAW\{}'.format(image_dir, image_file))[:1030,22:] for image_file in image_files] #due to the way samples are imaged, the two images are slightly misaligned so we crop the excess of each, [y-direction, x-direction]
+green_images = [plt.imread('{}\RAW\{}'.format(image_dir, image_file)) for image_file in image_files] #due to the way samples are imaged, the two images are slightly misaligned so we crop the excess of each, [y-direction, x-direction]
 
 ydim, xdim = 1030, 1354 #images are 1354 x 1030 post crop
 num_images = len(green_images)
