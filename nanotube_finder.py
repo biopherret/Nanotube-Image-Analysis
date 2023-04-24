@@ -7,8 +7,47 @@ from joblib import Parallel, delayed
 import matplotlib.patches as mpatches
 from scipy.spatial.distance import cdist
 import pandas as pd
+from sqlalchemy.engine import URL
+from sqlalchemy import create_engine
+import sqlalchemy as sa
+import pyodbc
 
 plt.style.use('sarah_plt_style.mplstyle')
+
+conn_str = (
+    r'driver={SQL Server};'
+    r'server=4C4157STUDIO\SQLEXPRESS;' #server name
+    r'database=FygensonLabData;' #database name
+    r'trusted_connection=yes;'
+    )
+
+#using SQLAlchemy to avoid a UserWarning
+connection_url = URL.create("mssql+pyodbc", query={"odbc_connect": conn_str})
+engine = create_engine(connection_url) #create SQLAlchemy engine object
+
+cnxn = pyodbc.connect(conn_str) #connect to server using pyodbc
+cursor = cnxn.cursor()
+
+def run_quary(quary_str):
+    '''Run a quary and return the output as a pandas datafrme
+
+    Args:
+        quary_str (str): quary string (not case sensitive, SQL strings need to be enclosed in single quotes)
+
+    Returns:
+        dataframe: quary output
+    '''
+    with engine.begin() as conn:
+        return pd.read_sql_query(sa.text(quary_str), conn)
+    
+def edit_database(quary_str):
+    '''Edit database with quary
+
+    Args:
+        quary_str (str): quary string (not case sensitive, SQL strings need to be enclosed in single quotes)
+    ''' 
+    cursor.execute(quary_str)
+    cnxn.commit()
 
 def educated_guess(blue_images, green_images):
     blue_ig = [int(np.median(image) * 1.25) for image in blue_images]
@@ -232,7 +271,8 @@ class cluster_image:
 
 print('Loading images ...')
 #change and get current working directory (cwd)
-os.chdir('{}\Images\{}'.format(os.getcwd(), input('Input the directory path to folder of images to find nanotubes in (from the Images Folder): ')))
+date_key = int(input('Input the name of the image day folder: '))
+os.chdir('{}\Images\{}\{}'.format(os.getcwd(), date_key, input('Input the folder of images to find nanotubes in (from the Date Folder): ')))
 image_dir = os.getcwd()
 
 #get image files
@@ -240,14 +280,19 @@ image_files = sorted(os.listdir('{}\RAW'.format(image_dir)))
 os.chdir('../')
 cwd = os.getcwd()
 
+cube_offset_df = run_quary(f'Select * From cube_offset Where date_id = {date_key}').set_index('date_id')
+green_crop = [cube_offset_df.loc[date_key]['green_crop_ystart'], cube_offset_df.loc[date_key]['green_crop_yend'], cube_offset_df.loc[date_key]['green_crop_xstart'], cube_offset_df.loc[date_key]['green_crop_xend']]
+blue_crop = [cube_offset_df.loc[date_key]['blue_crop_ystart'], cube_offset_df.loc[date_key]['blue_crop_yend'], cube_offset_df.loc[date_key]['blue_crop_xstart'], cube_offset_df.loc[date_key]['blue_crop_xend']]
+
 #make new directory
 new_folder = '{}\\Nanotube finder results'.format(image_dir)
 os.mkdir(new_folder)
 
-green_images = [plt.imread('{}\RAW\{}'.format(image_dir, image_file))[:1024,18:] for image_file in image_files[1::2]] #due to the way samples are imaged, the two images are slightly misaligned so we crop the excess of each
-blue_images = [plt.imread('{}\RAW\{}'.format(image_dir, image_file))[16:,:1358] for image_file in image_files[::2]] #[y-direction, x-direction]
+green_images = [plt.imread('{}\RAW\{}'.format(image_dir, image_file))[green_crop[0]:green_crop[1], green_crop[2]:green_crop[3]] for image_file in image_files[1::2]] #due to the way samples are imaged, the two images are slightly misaligned so we crop the excess of each
+blue_images = [plt.imread('{}\RAW\{}'.format(image_dir, image_file))[blue_crop[0]:blue_crop[1], blue_crop[2]:blue_crop[3]] for image_file in image_files[::2]] #[y-direction, x-direction]
 
-ydim, xdim = 1030, 1354 #images are 1354 x 1030 post crop
+xdim = cube_offset_df.loc[date_key]['xdim'] #retrieve dimensions of images post crop
+ydim = cube_offset_df.loc[date_key]['ydim']
 num_images = len(green_images)
 
 print('Making an educated guess for the pixel classification parameters...')
