@@ -78,8 +78,12 @@ for folder in base_folders:
         for im_set in range(num_images):
             image_file_name = image_files[1::2][im_set][:-10]
             new_image = np.stack((green_images[im_set], blue_images[im_set], blue_images[im_set]), axis = 2) #stack the 2 images together
+            ydim = np.shape(new_image)[0] #determine the size of the image to be abel to make the correct size blank figure
+            xdim = np.shape(new_image)[1]
+            inch_per_pixel = 0.014
 
             fig = plt.figure(frameon = False) #make a figure object that doesn't have the frame
+            fig.set_size_inches(xdim*inch_per_pixel,ydim*inch_per_pixel)
             ax = plt.Axes(fig, [0,0,1,1])
             ax.set_axis_off()
             fig.add_axes(ax) #add an ax that doesn't have the axis elements
