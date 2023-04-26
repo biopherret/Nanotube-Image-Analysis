@@ -54,7 +54,6 @@ slide_sample_df = run_quary('Select * From slide_sample').set_index('slide_sampl
 
 unique_key_index = 0 
 for folder_name in base_folders:
-    folder_name = folder_name.replace(' ', '_')
     slide_sample_id = f'{date_key}{unique_key_index:02}' #slide sample key (unique) is the folder date and a 2 digit number
     unique_key_index += 1
     
