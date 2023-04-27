@@ -287,9 +287,6 @@ cube_offset_df = run_quary(f'Select * From cube_offset Where date_id = {date_key
 green_crop = [cube_offset_df.loc[date_key]['green_crop_ystart'], cube_offset_df.loc[date_key]['green_crop_yend'], cube_offset_df.loc[date_key]['green_crop_xstart'], cube_offset_df.loc[date_key]['green_crop_xend']]
 blue_crop = [cube_offset_df.loc[date_key]['blue_crop_ystart'], cube_offset_df.loc[date_key]['blue_crop_yend'], cube_offset_df.loc[date_key]['blue_crop_xstart'], cube_offset_df.loc[date_key]['blue_crop_xend']]
 
-#make new directory
-new_folder = '{}\\Nanotube finder results'.format(image_dir)
-os.mkdir(new_folder)
 
 green_images = [plt.imread('{}\RAW\{}'.format(image_dir, image_file))[green_crop[0]:green_crop[1], green_crop[2]:green_crop[3]] for image_file in image_files[1::2]] #due to the way samples are imaged, the two images are slightly misaligned so we crop the excess of each
 blue_images = [plt.imread('{}\RAW\{}'.format(image_dir, image_file))[blue_crop[0]:blue_crop[1], blue_crop[2]:blue_crop[3]] for image_file in image_files[::2]] #[y-direction, x-direction]
@@ -308,32 +305,21 @@ print('Getting cluster data using best parameters ...')
 best_images = Parallel(n_jobs= -1, verbose = 10)(delayed(cluster_image)(simple_lin_map(best_fits[i], blue_images[i], green_images[i])) for i in range(num_images))
 two_sided_data = Parallel(n_jobs = -1, verbose = 10)(delayed(lambda cluster_im : cluster_im.find_two_sided_clusters())(best_images[im_set]) for im_set in range(num_images))
 
-print('Exporting length data to excel file ...')
-#write length data to excel file
-writer = pd.ExcelWriter('{}\\Nanotube Finder Results.xlsx'.format(new_folder), engine='xlsxwriter')
-for im_set in range(num_images):
-    #get data for excel doc
-    data_dict ={'REs Lengths' : best_images[im_set].RE_clust_dim[0],
-        'SEs Lengths' : best_images[im_set].SE_clust_dim[0],
-        'Two Sided Lengths' : two_sided_data[im_set][2][0]}
-    data = pd.DataFrame.from_dict(data_dict, orient = 'index')
-    data = data.transpose()
-    image_name = image_files[1::2][im_set][:-10]
-
-    data.to_excel(writer, sheet_name=image_name)
-
-writer.save()
-
 print('Exporting length data to SQL server ...')
 for im_set in range(num_images):
     image_name = image_files[1::2][im_set][:-10]
     res_lengths = best_images[im_set].RE_clust_dim[0]
+
     for re_tube in res_lengths: #add every RE tube to the database
-        edit_database(f'Insert Into length_distributions Values ()')
+        edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 're', {re_tube})")
+
     ses_lengths = best_images[im_set].SE_clust_dim[0]
+    for se_tube in ses_lengths:
+        edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 'se', {se_tube})")
+
     ts_lengths = two_sided_data[im_set][2][0]
-
-
+    for ts_tube in ts_lengths:
+        edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 'ts', {ts_tube})")        
 
 
 print('Plotting and exporting found clusters ...')
@@ -364,6 +350,6 @@ for im_set in range(num_images):
     axs[i,j].set_xlim((0, xdim))
     axs[i,j].invert_yaxis()
 
-plt.savefig('{}\\Nanotube Finder Results'.format(new_folder))
+plt.savefig(f'{folder_name}\\Nanotube finder results')
 plt.show()
 plt.close()
