@@ -42,7 +42,6 @@ def edit_database(quary_str):
     cursor.execute(quary_str)
     cnxn.commit()
 
-
 date_key = int(input('Input the image date to prep the SQL Server for: '))
 
 os.chdir('{}\Images\{}'.format(os.getcwd(), str(date_key))) #change the current working directory
@@ -51,6 +50,25 @@ base_folders = os.listdir(cwd) #find the folder names
 
 nanotube_sample_df = run_quary('Select * From nanotube_sample').set_index('nanotube_sample_id') #retrieve current nanotube_sample and slide_sample tables
 slide_sample_df = run_quary('Select * From slide_sample').set_index('slide_sample_id')
+cube_offset_df = run_quary('Select * From cube_offset').set_index('date_id')
+
+if date_key not in cube_offset_df.index.values.tolist(): #if you have not yet added the cube offset data for this imaging day
+    if input('Would you like to add cube offset points for this imaging day? (yes/no) ') == 'yes':
+        last_imaging_date = max([i for i in cube_offset_df.index.values.tolist() if i < date_key])
+        if input(f'Has the offset changed since the list imaging day ({max(cube_offset_df.index.values.tolist())})? (yes/no) ') == 'yes':
+            print('Find a the x,y points of an objects which exists in both green and blue images')
+            green_x = input('    Green x: ')
+            green_y = input('    Green y: ')
+            blue_x = input('    Blue x: ')
+            blue_y = input('    Blue y: ')
+            
+        else: 
+            green_x = cube_offset_df.loc[last_imaging_date]['green_x']
+            green_y = cube_offset_df.loc[last_imaging_date]['green_y']
+            blue_x = cube_offset_df.loc[last_imaging_date]['blue_x']
+            blue_y = cube_offset_df.loc[last_imaging_date]['blue_y']
+        
+        edit_database(f'Insert Into nanotube_sample (date_id , green_x, green_y, blue_x, blue_y) Values ({date_key}, {green_x}, {green_y}, {blue_x}, {blue_y})') #add new offset points to the database
 
 unique_key_index = 0 
 for folder_name in base_folders:
@@ -82,4 +100,3 @@ for folder_name in base_folders:
             anneal_seed_concentration = np.array(run_quary(f'Select molarity_avg From seed_sample Where seed_sample_id = {seed_sample_id}')).flatten()[0] * uL_seed_added / 25
 
         edit_database(f'Insert Into nanotube_sample Values ({nanotube_sample_id}, {seed_sample_id}, {uL_seed_added}, {anneal_seed_concentration})') #add this nanotube_sample to nanotube_sample table
-
