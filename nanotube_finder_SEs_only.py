@@ -5,8 +5,47 @@ from scipy import signal
 from sklearn.cluster import AgglomerativeClustering
 from joblib import Parallel, delayed
 import pandas as pd
+from sqlalchemy.engine import URL
+from sqlalchemy import create_engine
+import sqlalchemy as sa
+import pyodbc
 
 plt.style.use('sarah_plt_style.mplstyle')
+
+conn_str = (
+    r'driver={SQL Server};'
+    r'server=4C4157STUDIO\SQLEXPRESS;' #server name
+    r'database=FygensonLabData;' #database name
+    r'trusted_connection=yes;'
+    )
+
+#using SQLAlchemy to avoid a UserWarning
+connection_url = URL.create("mssql+pyodbc", query={"odbc_connect": conn_str})
+engine = create_engine(connection_url) #create SQLAlchemy engine object
+
+cnxn = pyodbc.connect(conn_str) #connect to server using pyodbc
+cursor = cnxn.cursor()
+
+def run_quary(quary_str):
+    '''Run a quary and return the output as a pandas datafrme
+
+    Args:
+        quary_str (str): quary string (not case sensitive, SQL strings need to be enclosed in single quotes)
+
+    Returns:
+        dataframe: quary output
+    '''
+    with engine.begin() as conn:
+        return pd.read_sql_query(sa.text(quary_str), conn)
+    
+def edit_database(quary_str):
+    '''Edit database with quary
+
+    Args:
+        quary_str (str): quary string (not case sensitive, SQL strings need to be enclosed in single quotes)
+    ''' 
+    cursor.execute(quary_str)
+    cnxn.commit()
 
 def educated_guess(green_images):
     green_ig = [int(np.median(image) * 1.5) for image in green_images]
@@ -159,17 +198,16 @@ class cluster_image:
 
 print('Loading images ...')
 #change and get current working directory (cwd)
-os.chdir('{}\Images\{}'.format(os.getcwd(), input('Input the directory path to folder of images to find nanotubes in (from the Images Folder): ')))
+date_key = int(input('Input the name of the image day folder: '))
+base_folders = os.listdir(f'{os.getcwd()}\Images\{str(date_key)}') #find the folder names
+folder_name = input('Input the folder of images to find nanotubes in (from the Date Folder): ')
+os.chdir('{}\Images\{}\{}'.format(os.getcwd(), date_key, folder_name))
 image_dir = os.getcwd()
-
+slide_sample_id = f'{date_key}{base_folders.index(folder_name):02}'
 #get image files
 image_files = sorted(os.listdir('{}\RAW'.format(image_dir)))
 os.chdir('../')
 cwd = os.getcwd()
-
-#make new directory
-new_folder = '{}\\Nanotube finder results'.format(image_dir)
-os.mkdir(new_folder)
 
 green_images = [plt.imread('{}\RAW\{}'.format(image_dir, image_file)) for image_file in image_files] #due to the way samples are imaged, the two images are slightly misaligned so we crop the excess of each, [y-direction, x-direction]
 
@@ -185,19 +223,13 @@ best_fits = Parallel(n_jobs = -1, verbose = 10)(delayed(custom_minimize)(lambda 
 print('Getting cluster data using best parameters ...')
 best_images = Parallel(n_jobs= -1, verbose = 10)(delayed(cluster_image)(simple_lin_map(best_fits[i], green_images[i])) for i in range(num_images))
 
-print('Exporting length data to excel file ...')
-#write length data to excel file
-writer = pd.ExcelWriter('{}\\Nanotube Finder Results.xlsx'.format(new_folder), engine='xlsxwriter')
+print('Exporting length data to SQL server ...')
 for im_set in range(num_images):
-    #get data for excel doc
-    data_dict ={'SEs Lengths' : best_images[im_set].SE_clust_dim[0]}
-    data = pd.DataFrame.from_dict(data_dict, orient = 'index')
-    data = data.transpose()
     image_name = image_files[im_set][:-4]
 
-    data.to_excel(writer, sheet_name=image_files[im_set])
-
-writer.save()
+    ses_lengths = best_images[im_set].SE_clust_dim[0]
+    for se_tube in ses_lengths:
+        edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 'se', {se_tube})")
 
 print('Plotting and exporting found clusters ...')
 if num_images%6 == 0:
@@ -218,6 +250,6 @@ for im_set in range(num_images):
     axs[i,j].set_xlim((0, xdim))
     axs[i,j].invert_yaxis()
 
-plt.savefig('{}\\Nanotube Finder Results'.format(new_folder))
+plt.savefig(f'{folder_name}\\Nanotube Finder Results')
 plt.show()
 plt.close()
