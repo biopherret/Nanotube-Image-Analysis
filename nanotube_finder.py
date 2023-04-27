@@ -12,7 +12,7 @@ from sqlalchemy import create_engine
 import sqlalchemy as sa
 import pyodbc
 
-plt.style.use('sarah_plt_style.mplstyle')
+plt.style.use('lexi_plt_style.mplstyle')
 
 conn_str = (
     r'driver={SQL Server};'
