@@ -272,8 +272,11 @@ class cluster_image:
 print('Loading images ...')
 #change and get current working directory (cwd)
 date_key = int(input('Input the name of the image day folder: '))
-os.chdir('{}\Images\{}\{}'.format(os.getcwd(), date_key, input('Input the folder of images to find nanotubes in (from the Date Folder): ')))
+base_folders = os.listdir(f'{os.getcwd()}\Images\{str(date_key)}') #find the folder names
+folder_name = input('Input the folder of images to find nanotubes in (from the Date Folder): ')
+os.chdir('{}\Images\{}\{}'.format(os.getcwd(), date_key, folder_name))
 image_dir = os.getcwd()
+slide_sample_id = f'{date_key}{base_folders.index(folder_name):02}'
 
 #get image files
 image_files = sorted(os.listdir('{}\RAW'.format(image_dir)))
@@ -320,6 +323,18 @@ for im_set in range(num_images):
     data.to_excel(writer, sheet_name=image_name)
 
 writer.save()
+
+print('Exporting length data to SQL server ...')
+for im_set in range(num_images):
+    image_name = image_files[1::2][im_set][:-10]
+    res_lengths = best_images[im_set].RE_clust_dim[0]
+    for re_tube in res_lengths: #add every RE tube to the database
+        edit_database(f'Insert Into length_distributions Values ()')
+    ses_lengths = best_images[im_set].SE_clust_dim[0]
+    ts_lengths = two_sided_data[im_set][2][0]
+
+
+
 
 print('Plotting and exporting found clusters ...')
 if num_images%6 == 0:
