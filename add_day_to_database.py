@@ -100,3 +100,5 @@ for folder_name in base_folders:
             anneal_seed_concentration = np.array(run_quary(f'Select molarity_avg From seed_sample Where seed_sample_id = {seed_sample_id}')).flatten()[0] * uL_seed_added / 25
 
         edit_database(f'Insert Into nanotube_sample Values ({nanotube_sample_id}, {seed_sample_id}, {uL_seed_added}, {anneal_seed_concentration})') #add this nanotube_sample to nanotube_sample table
+
+    nanotube_sample_df = run_quary('Select * From nanotube_sample').set_index('nanotube_sample_id') #re-grab the nanotube sample df after it is updated
