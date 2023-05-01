@@ -25,18 +25,6 @@ engine = create_engine(connection_url) #create SQLAlchemy engine object
 
 cnxn = pyodbc.connect(conn_str) #connect to server using pyodbc
 cursor = cnxn.cursor()
-
-def run_quary(quary_str):
-    '''Run a quary and return the output as a pandas datafrme
-
-    Args:
-        quary_str (str): quary string (not case sensitive, SQL strings need to be enclosed in single quotes)
-
-    Returns:
-        dataframe: quary output
-    '''
-    with engine.begin() as conn:
-        return pd.read_sql_query(sa.text(quary_str), conn)
     
 def edit_database(quary_str):
     '''Edit database with quary
