@@ -218,10 +218,8 @@ for im_set in range(num_images):
     image_name = image_files[im_set][:-4]
 
     ses_lengths = best_images[im_set].SE_clust_dim[0]
-    #for se_tube in ses_lengths:
-        #edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 'se', {se_tube})")
-
-print(best_images[6].SE_clust_dim[0])
+    for se_tube in ses_lengths:
+        edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 'se', {se_tube})")
 
 print('Plotting and exporting found clusters ...')
 if num_images%6 == 0:
@@ -242,6 +240,6 @@ for im_set in range(num_images):
     axs[i,j].set_xlim((0, xdim))
     axs[i,j].invert_yaxis()
 
-#plt.savefig(f'{folder_name}\\Nanotube Finder Results')
+plt.savefig(f'{folder_name}\\Nanotube Finder Results')
 plt.show()
 plt.close()
