@@ -220,9 +220,12 @@ class cluster_image:
         overlapping_cluster_widths = []
         overlapping_cluster_lengths = []
 
+        se_is_ts = np.zeros(len(self.good_SE_clusters)) #start with assumption all tubes are not part of ts tube
+        re_is_ts = np.zeros(len(self.good_RE_clusters))
+
         for RE_cluster in range(len(self.good_RE_clusters)):
             for SE_cluster in range(len(self.good_SE_clusters)):
-                if np.min(cdist(RE_points[RE_cluster], SE_points[SE_cluster])) <= 1:
+                if np.min(cdist(RE_points[RE_cluster], SE_points[SE_cluster])) <= 1: #if these two clusters are touching
                     x_min = min(min(RE_points[RE_cluster][:,1]), min(SE_points[SE_cluster][:,1]))
                     x_max = max(max(RE_points[RE_cluster][:,1]), max(SE_points[SE_cluster][:,1]))
                     y_min = min(min(RE_points[RE_cluster][:,0]), min(SE_points[SE_cluster][:,0]))
@@ -230,13 +233,16 @@ class cluster_image:
                     length = np.sqrt((x_max - x_min)**2 + (y_max - y_min)**2)
                     width = (RE_sizes[RE_cluster] + SE_sizes[SE_cluster]) / length
 
-                    if outlier_probability(0.9, 8, 1, 30, 5, width) < 0.9:
+                    if outlier_probability(0.9, 8, 1, 30, 5, width) < 0.9: #if it is not an outlier
                         overlapping_clusters.append(np.array([self.good_RE_clusters[RE_cluster], self.good_SE_clusters[SE_cluster]]))
                         overlapping_cluster_bounds.append(np.array([x_min, x_max, y_min, y_max]))
                         overlapping_cluster_lengths.append(length)
                         overlapping_cluster_widths.append(width)
 
-        return np.array(overlapping_clusters), np.array(overlapping_cluster_bounds), np.array((np.array(overlapping_cluster_lengths), np.array(overlapping_cluster_widths)))
+                        re_is_ts[RE_cluster] = 1 #assign this tube as being in a ts tube
+                        se_is_ts[SE_cluster] = 1
+
+        return (np.array(overlapping_clusters), np.array(overlapping_cluster_bounds), np.array((np.array(overlapping_cluster_lengths), np.array(overlapping_cluster_widths)))), (re_is_ts, se_is_ts)
 
     def __init__(self, array):
         self.image = array
@@ -308,18 +314,19 @@ two_sided_data = Parallel(n_jobs = -1, verbose = 10)(delayed(lambda cluster_im :
 print('Exporting length data to SQL server ...')
 for im_set in range(num_images):
     image_name = image_files[1::2][im_set][:-10]
+    ts_im_data, ts_assignments = two_sided_data[im_set]
+    
     res_lengths = best_images[im_set].RE_clust_dim[0]
-
-    for re_tube in res_lengths: #add every RE tube to the database
-        edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 're', {re_tube})")
+    for i in range(len(res_lengths)):
+        edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 're', {res_lengths[i]}, {ts_assignments[0][i]})")
 
     ses_lengths = best_images[im_set].SE_clust_dim[0]
-    for se_tube in ses_lengths:
-        edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 'se', {se_tube})")
+    for i in range(len(ses_lengths)):
+        edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 'se', {ses_lengths[i]}, {ts_assignments[1][i]})")
 
-    ts_lengths = two_sided_data[im_set][2][0]
+    ts_lengths = ts_im_data[2][0]
     for ts_tube in ts_lengths:
-        edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 'ts', {ts_tube})")        
+        edit_database(f"Insert Into length_distributions (slide_sample_id, image_name, length_type, lengths) Values ({slide_sample_id},'{image_name}', 'ts', {ts_tube})")        
 
 
 print('Plotting and exporting found clusters ...')
@@ -341,7 +348,7 @@ for im_set in range(num_images):
     for se_cluster in best_images[im_set].good_SE_clusters:
         axs[i,j].scatter(best_images[im_set].SE_points[best_images[im_set].SE_clust_assign == se_cluster,1], best_images[im_set].SE_points[best_images[im_set].SE_clust_assign == se_cluster,0], s = 1, c = '#2ca02c')
 
-    for two_sided_bounds in two_sided_data[im_set][1]:
+    for two_sided_bounds in two_sided_data[im_set][0][1]:
         left, bottom, width, height = two_sided_bounds[0], two_sided_bounds[2], two_sided_bounds[1] - two_sided_bounds[0], two_sided_bounds[3] - two_sided_bounds[2] #determine location and size of box to plot to outline twosided tubes
         rect = mpatches.Rectangle((left, bottom), width, height, fill = False, color = 'purple', linewidth = 2)
         axs[i,j].add_patch(rect)

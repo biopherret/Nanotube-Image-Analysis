@@ -20,7 +20,6 @@ engine = create_engine(connection_url) #create SQLAlchemy engine object
 cnxn = pyodbc.connect(conn_str) #connect to server using pyodbc
 cursor = cnxn.cursor()
 
-
 def run_quary(quary_str):
     '''Run a quary and return the output as a pandas datafrme
 
