@@ -57,7 +57,7 @@ def educated_guess(blue_images, green_images):
 
     return [(blue_ig[i], green_ig[i]) for i in range(num_images)], bmin, bmax, gmin, gmax
 
-def find_length(x_points : np.array, y_points : np.array):
+def find_ete_length(x_points : np.array, y_points : np.array):
     '''finds the lengths (aka largest dimension) of a cluster using its x and y point data
 
     Args:
@@ -186,14 +186,17 @@ class cluster_image:
         RE_sizes = np.array([len(self.RE_points[np.where(clusters_RE == num_clust)][:,1]) for num_clust in range(num_RE_clust)]) #find the sizes of each cluster
         SE_sizes = np.array([len(self.SE_points[np.where(clusters_SE == num_clust)][:,1]) for num_clust in range(num_SE_clust)])
 
-        RE_lengths = np.array([find_length(self.RE_points[np.where(clusters_RE == num_clust)][:,1], self.RE_points[np.where(clusters_RE == num_clust)][:,0]) for num_clust in range(num_RE_clust)]) #find lengths of each cluster
-        SE_lengths = np.array([find_length(self.SE_points[np.where(clusters_SE == num_clust)][:,1], self.SE_points[np.where(clusters_SE == num_clust)][:,0]) for num_clust in range(num_SE_clust)])
+        RE_ete_lengths = np.array([find_ete_length(self.RE_points[np.where(clusters_RE == num_clust)][:,1], self.RE_points[np.where(clusters_RE == num_clust)][:,0]) for num_clust in range(num_RE_clust)]) #find end to end lengths of each cluster
+        SE_ete_lengths = np.array([find_ete_length(self.SE_points[np.where(clusters_SE == num_clust)][:,1], self.SE_points[np.where(clusters_SE == num_clust)][:,0]) for num_clust in range(num_SE_clust)])
 
-        RE_widths = np.array([RE_sizes[num_clust] / RE_lengths[num_clust] for num_clust in range(num_RE_clust)]) #get rid of this for loop?
-        SE_widths = np.array([SE_sizes[num_clust] / SE_lengths[num_clust] for num_clust in range(num_SE_clust)])
+        RE_widths = np.array([RE_sizes[num_clust] / RE_ete_lengths[num_clust] for num_clust in range(num_RE_clust)]) #get the width using the end to end length
+        SE_widths = np.array([SE_sizes[num_clust] / SE_ete_lengths[num_clust] for num_clust in range(num_SE_clust)])
 
         RE_good_clust = np.where((RE_sizes > 120) & (outlier_probability(0.9, 8, 1, 30, 5, RE_widths) < 0.9))[0] #clusters which are large enough to be nanotubes AND are less than 90% likely to be an outlier
         SE_good_clust = np.where((SE_sizes > 120) & (outlier_probability(0.9, 8, 1, 30, 5, SE_widths) < 0.9))[0]
+
+        RE_lengths = np.array([RE_sizes[num_clust] / 8 for num_clust in range(num_RE_clust)]) #find the contour length using the know nanotube width
+        SE_lengths = np.array([SE_sizes[num_clust] / 8 for num_clust in range(num_SE_clust)])
 
         #only return dimensions for good clusters
         RE_lengths = RE_lengths[RE_good_clust]

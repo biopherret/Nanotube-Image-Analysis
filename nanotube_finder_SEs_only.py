@@ -42,7 +42,7 @@ def educated_guess(green_images):
 
     return [[green_ig[i]] for i in range(num_images)], gmin, gmax
 
-def find_length(x_points : np.array, y_points : np.array):
+def find_ete_length(x_points : np.array, y_points : np.array):
     '''finds the lengths (aka largest dimension) of a cluster using its x and y point data
 
     Args:
@@ -153,11 +153,13 @@ class cluster_image:
 
         SE_sizes = np.array([len(self.SE_points[np.where(clusters_SE == num_clust)][:,1]) for num_clust in range(num_SE_clust)]) #find the sizes of each cluster
 
-        SE_lengths = np.array([find_length(self.SE_points[np.where(clusters_SE == num_clust)][:,1], self.SE_points[np.where(clusters_SE == num_clust)][:,0]) for num_clust in range(num_SE_clust)]) #find lengths of each cluster
+        SE_ete_lengths = np.array([find_ete_length(self.SE_points[np.where(clusters_SE == num_clust)][:,1], self.SE_points[np.where(clusters_SE == num_clust)][:,0]) for num_clust in range(num_SE_clust)]) #find end to end lengths of each cluster
 
-        SE_widths = np.array([SE_sizes[num_clust] / SE_lengths[num_clust] for num_clust in range(num_SE_clust)]) #get rid of this for loop?
+        SE_widths = np.array([SE_sizes[num_clust] / SE_ete_lengths[num_clust] for num_clust in range(num_SE_clust)]) #use end to end lengths to get widths (roughly, this assumes straight tubes which most of them are)
 
         SE_good_clust = np.where((SE_sizes > 120) & (outlier_probability(0.9, 8, 1, 30, 5, SE_widths) < 0.9))[0] #clusters which are large enough to be nanotubes AND are less than 90% likely to be an outlier
+
+        SE_lengths = np.array([SE_sizes[num_clust] / 8 for num_clust in range(num_SE_clust)]) #get the contour length using the known nanotube width in pixels
 
         #only return dimensions for good clusters
         SE_lengths = SE_lengths[SE_good_clust]
@@ -216,8 +218,10 @@ for im_set in range(num_images):
     image_name = image_files[im_set][:-4]
 
     ses_lengths = best_images[im_set].SE_clust_dim[0]
-    for se_tube in ses_lengths:
-        edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 'se', {se_tube})")
+    #for se_tube in ses_lengths:
+        #edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 'se', {se_tube})")
+
+print(best_images[6].SE_clust_dim[0])
 
 print('Plotting and exporting found clusters ...')
 if num_images%6 == 0:
@@ -238,6 +242,6 @@ for im_set in range(num_images):
     axs[i,j].set_xlim((0, xdim))
     axs[i,j].invert_yaxis()
 
-plt.savefig(f'{folder_name}\\Nanotube Finder Results')
+#plt.savefig(f'{folder_name}\\Nanotube Finder Results')
 plt.show()
 plt.close()
