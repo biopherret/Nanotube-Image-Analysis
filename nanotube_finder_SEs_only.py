@@ -273,6 +273,6 @@ for im_set in range(num_images):
     axs[i,j].set_xlim((0, xdim))
     axs[i,j].invert_yaxis()
 
-#plt.savefig(f'{folder_name}\\Nanotube Finder Results')
+plt.savefig(f'{folder_name}\\Nanotube Finder Results')
 plt.show()
 plt.close()

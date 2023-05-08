@@ -312,7 +312,7 @@ class cluster_image:
         self.RE_clust_assign, self.SE_clust_assign, self.RE_clust_width, self.SE_clust_width, self.good_RE_clusters, self.good_SE_clusters = self.find_clusters() #all cluster assignments of RE pixels and SE pixel
 
         self.chi_square = 0
-        
+
         if np.size(self.SE_clust_width) == 0: #if no SE points made it to clustering (ie no clusters are found)
             self.SE_var_width = 1
             self.chi_square = np.Inf
@@ -377,15 +377,15 @@ for im_set in range(num_images):
 
     res_lengths, ses_lengths = best_images[im_set].get_length_dist()
 
-    #for i in range(len(res_lengths)):
-        #edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 're', {res_lengths[i]}, {ts_assignments[0][i]})")
+    for i in range(len(res_lengths)):
+        edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 're', {res_lengths[i]}, {ts_assignments[0][i]})")
 
-    #for i in range(len(ses_lengths)):
-        #edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 'se', {ses_lengths[i]}, {ts_assignments[1][i]})")
+    for i in range(len(ses_lengths)):
+        edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 'se', {ses_lengths[i]}, {ts_assignments[1][i]})")
 
-    #ts_lengths = ts_im_data[2][0]
-    #for ts_tube in ts_lengths:
-        #edit_database(f"Insert Into length_distributions (slide_sample_id, image_name, length_type, lengths) Values ({slide_sample_id},'{image_name}', 'ts', {ts_tube})")
+    ts_lengths = ts_im_data[2][0]
+    for ts_tube in ts_lengths:
+        edit_database(f"Insert Into length_distributions (slide_sample_id, image_name, length_type, lengths) Values ({slide_sample_id},'{image_name}', 'ts', {ts_tube})")
 
 
 print('Plotting and exporting found clusters ...')
@@ -416,6 +416,6 @@ for im_set in range(num_images):
     axs[i,j].set_xlim((0, xdim))
     axs[i,j].invert_yaxis()
 
-#plt.savefig(f'{folder_name}\\Nanotube finder results')
+plt.savefig(f'{folder_name}\\Nanotube finder results')
 plt.show()
 plt.close()
