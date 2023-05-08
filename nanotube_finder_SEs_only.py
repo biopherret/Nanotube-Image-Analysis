@@ -176,8 +176,8 @@ class cluster_image:
 
         return clusters_SE, (SE_lengths, SE_widths, SE_sizes), SE_good_clust
 
-    def __init__(self, array):
-        self.image = array
+    def __init__(self, par, green):
+        self.image = classify_pixels(par, green)
         self.filt_image = self.filter_lone_pixels() #filters out classified pixels which are not neighboring any pixels of the same classification
 
         self.SE_points = np.argwhere(self.filt_image == 2)#[:,1] is x coordinates, [:,0] is y coordinates
@@ -217,7 +217,7 @@ print('Making an educated guess for the pixel classification parameters...')
 initial_guesses, gmin, gmax = educated_guess(green_images)
 
 print('Finding best pixel classification parameters...')
-best_fits = Parallel(n_jobs = -1, verbose = 10)(delayed(custom_minimize)(lambda par, fun, green : cluster_image(fun(par, green)).chi_square, initial_guesses[i], args=(classify_pixels, green_images[i]), bounds = [(gmin, gmax)]) for i in range(num_images))
+best_fits = Parallel(n_jobs = -1, verbose = 10)(delayed(custom_minimize)(lambda par, green : cluster_image(par, green).chi_square, initial_guesses[i], args=(green_images[i]), bounds = [(gmin, gmax)]) for i in range(num_images))
 
 print('Getting cluster data using best parameters ...')
 best_images = Parallel(n_jobs= -1, verbose = 10)(delayed(cluster_image)(classify_pixels(best_fits[i], green_images[i])) for i in range(num_images))

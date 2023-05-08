@@ -257,8 +257,8 @@ class cluster_image:
 
         return (np.array(overlapping_clusters), np.array(overlapping_cluster_bounds), np.array((np.array(overlapping_cluster_lengths), np.array(overlapping_cluster_widths)))), (re_is_ts, se_is_ts)
 
-    def __init__(self, array):
-        self.image = array
+    def __init__(self, par, blue, green):
+        self.image = classify_pixels(par, blue, green)
         self.filt_image = self.filter_lone_pixels() #filters out classified pixels which are not neighboring any pixels of the same classification
 
         self.RE_points, self.SE_points = np.argwhere(self.filt_image == 1), np.argwhere(self.filt_image == 2)#[:,1] is x coordinates, [:,0] is y coordinates
@@ -318,7 +318,7 @@ print('Making an educated guess for the pixel classification parameters...')
 initial_guesses, bmin, bmax, gmin, gmax = educated_guess(blue_images, green_images)
 
 print('Finding best pixel classification parameters...')
-best_fits = Parallel(n_jobs = -1, verbose = 10)(delayed(custom_minimize)(lambda par, fun, blue, green : cluster_image(fun(par, blue, green)).chi_square, initial_guesses[i], args=(classify_pixels, blue_images[i], green_images[i]), bounds = ((bmin, bmax), (gmin, gmax))) for i in range(num_images))
+best_fits = Parallel(n_jobs = -1, verbose = 10)(delayed(custom_minimize)(lambda par, blue, green : cluster_image(par, blue, green).chi_square, initial_guesses[i], args=(blue_images[i], green_images[i]), bounds = ((bmin, bmax), (gmin, gmax))) for i in range(num_images))
 
 print('Getting cluster data using best parameters ...')
 best_images = Parallel(n_jobs= -1, verbose = 10)(delayed(cluster_image)(classify_pixels(best_fits[i], blue_images[i], green_images[i])) for i in range(num_images))
