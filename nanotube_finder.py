@@ -122,7 +122,17 @@ def custom_minimize(fun, guess, args = (), max_fun_calls = None, bounds = None):
 
     return best_par
 
-def simple_lin_map(par, blue_pixel, green_pixel):
+def classify_pixels(par, blue_pixel, green_pixel):
+    '''classify each pixel as either background (0),  REs pixel (1), or SEs pixel(2)
+
+    Args:
+        par (tuple): (blue cutoff value, green cutoff value)
+        blue_pixel (np.array): image in blue
+        green_pixel (np.array): image in green
+
+    Returns:
+        np.array: classified image
+    '''
     Pb, Pg = par
     if blue_pixel > Pb:
         return 1 #REs
@@ -131,7 +141,7 @@ def simple_lin_map(par, blue_pixel, green_pixel):
     else:
         return 0 #background
 
-simple_lin_map = np.vectorize(simple_lin_map, excluded=[0])
+classify_pixels = np.vectorize(classify_pixels, excluded=[0])
 
 class cluster_image:
     def filter_lone_pixels(self):
@@ -308,10 +318,10 @@ print('Making an educated guess for the pixel classification parameters...')
 initial_guesses, bmin, bmax, gmin, gmax = educated_guess(blue_images, green_images)
 
 print('Finding best pixel classification parameters...')
-best_fits = Parallel(n_jobs = -1, verbose = 10)(delayed(custom_minimize)(lambda par, fun, blue, green : cluster_image(fun(par, blue, green)).chi_square, initial_guesses[i], args=(simple_lin_map, blue_images[i], green_images[i]), bounds = ((bmin, bmax), (gmin, gmax))) for i in range(num_images))
+best_fits = Parallel(n_jobs = -1, verbose = 10)(delayed(custom_minimize)(lambda par, fun, blue, green : cluster_image(fun(par, blue, green)).chi_square, initial_guesses[i], args=(classify_pixels, blue_images[i], green_images[i]), bounds = ((bmin, bmax), (gmin, gmax))) for i in range(num_images))
 
 print('Getting cluster data using best parameters ...')
-best_images = Parallel(n_jobs= -1, verbose = 10)(delayed(cluster_image)(simple_lin_map(best_fits[i], blue_images[i], green_images[i])) for i in range(num_images))
+best_images = Parallel(n_jobs= -1, verbose = 10)(delayed(cluster_image)(classify_pixels(best_fits[i], blue_images[i], green_images[i])) for i in range(num_images))
 two_sided_data = Parallel(n_jobs = -1, verbose = 10)(delayed(lambda cluster_im : cluster_im.find_two_sided_clusters())(best_images[im_set]) for im_set in range(num_images))
 
 print('Exporting length data to SQL server ...')

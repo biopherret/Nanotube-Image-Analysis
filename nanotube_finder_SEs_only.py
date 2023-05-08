@@ -107,21 +107,30 @@ def custom_minimize(fun, guess, args = (), max_fun_calls = None, bounds = None):
 
     return best_par
 
-def simple_lin_map(par, green_pixel):
+def classify_pixels(par, green_pixel):
+    '''classify each pixel as either background (0) or an SEs pixel (2)
+
+    Args:
+        par (tuple): green cutoff value
+        green_pixel (np.array): image to apply classification to
+
+    Returns:
+        np.array: classified image
+    '''
     Pg = par[0]
     if green_pixel > Pg:
         return 2 #SEs
     else:
         return 0 #background
 
-simple_lin_map = np.vectorize(simple_lin_map, excluded=[0])
+classify_pixels = np.vectorize(classify_pixels, excluded=[0])
 
 class cluster_image:
     def filter_lone_pixels(self):
         '''filters the cluster image for single pixels with no neighbors
 
         Returns:
-            np.array, int: filtered image and the number of pixels which were filtered out
+            np.array, int: filtered image and the number of pixels which wer e filtered out
         '''
         unfiltered_SE_image = (self.image == 2) * 1 #this is a boolean image, where 2 -> True
         x_SE = signal.convolve2d(unfiltered_SE_image, np.ones((3,3)), mode='same')
@@ -208,10 +217,10 @@ print('Making an educated guess for the pixel classification parameters...')
 initial_guesses, gmin, gmax = educated_guess(green_images)
 
 print('Finding best pixel classification parameters...')
-best_fits = Parallel(n_jobs = -1, verbose = 10)(delayed(custom_minimize)(lambda par, fun, green : cluster_image(fun(par, green)).chi_square, initial_guesses[i], args=(simple_lin_map, green_images[i]), bounds = [(gmin, gmax)]) for i in range(num_images))
+best_fits = Parallel(n_jobs = -1, verbose = 10)(delayed(custom_minimize)(lambda par, fun, green : cluster_image(fun(par, green)).chi_square, initial_guesses[i], args=(classify_pixels, green_images[i]), bounds = [(gmin, gmax)]) for i in range(num_images))
 
 print('Getting cluster data using best parameters ...')
-best_images = Parallel(n_jobs= -1, verbose = 10)(delayed(cluster_image)(simple_lin_map(best_fits[i], green_images[i])) for i in range(num_images))
+best_images = Parallel(n_jobs= -1, verbose = 10)(delayed(cluster_image)(classify_pixels(best_fits[i], green_images[i])) for i in range(num_images))
 
 print('Exporting length data to SQL server ...')
 for im_set in range(num_images):
@@ -219,7 +228,7 @@ for im_set in range(num_images):
 
     ses_lengths = best_images[im_set].SE_clust_dim[0]
     for se_tube in ses_lengths:
-        edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 'se', {se_tube})")
+        edit_database(f"Insert Into length_distributions (slide_sample_id, image_name, length_type, lengths) Values ({slide_sample_id},'{image_name}', 'se', {se_tube})")
 
 print('Plotting and exporting found clusters ...')
 if num_images%6 == 0:
