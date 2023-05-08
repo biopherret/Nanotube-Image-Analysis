@@ -42,13 +42,13 @@ def run_quary(quary_str):
     '''
     with engine.begin() as conn:
         return pd.read_sql_query(sa.text(quary_str), conn)
-    
+
 def edit_database(quary_str):
     '''Edit database with quary
 
     Args:
         quary_str (str): quary string (not case sensitive, SQL strings need to be enclosed in single quotes)
-    ''' 
+    '''
     cursor.execute(quary_str)
     cnxn.commit()
 
@@ -196,7 +196,7 @@ class cluster_image:
         else:
             num_SE_clust = max(clusters_SE) + 1 #assignments are from 0 to max_num so the total number of clusters is max_num + 1
 
-    
+
         SE_widths = []
         SE_sizes = []
         for num_clust in range(num_SE_clust):
@@ -242,7 +242,7 @@ class cluster_image:
             fil.analyze_skeletons(skel_thresh=10*u.pix)
 
             se_contour_lengths.append(np.count_nonzero(fil.skeleton_longpath == 1)) #find the length of the longest path on the skeleton
-    
+
         re_contour_lengths = []
         for re_clust in self.good_RE_clusters:
             clust_ypoints = self.RE_points[self.RE_clust_assign == re_clust, 0] #get the x and y points of the cluster
@@ -268,7 +268,7 @@ class cluster_image:
         Returns:
             tuple, array: first array for the cluster pairs (REs, SEs) which make up two sided tubes, second for the (xmin, xmax, ymin, ymax) bounds of each two sided tube found
         '''
-        
+
         overlapping_clusters = []
         overlapping_cluster_bounds = []
         overlapping_cluster_widths = []
@@ -285,10 +285,10 @@ class cluster_image:
                     RE_size = len(self.RE_points[np.where(self.RE_clust_assign == RE_cluster)][:,1])
                     SE_size = len(self.SE_points[np.where(self.SE_clust_assign == SE_cluster)][:,1])
 
-                    x_min = min(min(RE_points[RE_cluster][:,1]), min(SE_points[SE_cluster][:,1]))
-                    x_max = max(max(RE_points[RE_cluster][:,1]), max(SE_points[SE_cluster][:,1]))
-                    y_min = min(min(RE_points[RE_cluster][:,0]), min(SE_points[SE_cluster][:,0]))
-                    y_max = max(max(RE_points[RE_cluster][:,0]), max(SE_points[SE_cluster][:,0]))
+                    x_min = min(min(RE_points[:,1]), min(SE_points[:,1]))
+                    x_max = max(max(RE_points[:,1]), max(SE_points[:,1]))
+                    y_min = min(min(RE_points[:,0]), min(SE_points[:,0]))
+                    y_max = max(max(RE_points[:,0]), max(SE_points[:,0]))
                     ete_length = np.sqrt((x_max - x_min)**2 + (y_max - y_min)**2)
                     width = (RE_size + SE_size) / ete_length
 
@@ -312,7 +312,7 @@ class cluster_image:
         self.RE_clust_assign, self.SE_clust_assign, self.RE_clust_width, self.SE_clust_width, self.good_RE_clusters, self.good_SE_clusters = self.find_clusters() #all cluster assignments of RE pixels and SE pixel
 
         self.chi_square = 0
-        
+
         if np.size(self.SE_clust_width) == 0: #if no SE points made it to clustering (ie no clusters are found)
             self.SE_var_width = 1
             self.chi_square = np.Inf
@@ -330,7 +330,7 @@ class cluster_image:
                 self.RE_var_width = 1
             else:
                 self.RE_var_width =  np.var(self.RE_clust_width)
-        
+
         if self.chi_square != np.Inf:
             self.chi_square = np.sum((self.RE_clust_width - 8)**2 / self.RE_var_width) / len(self.good_RE_clusters) + np.sum((self.SE_clust_width - 8)**2 / self.SE_var_width) / len(self.good_SE_clusters)
 
@@ -367,7 +367,7 @@ print('Finding best pixel classification parameters...')
 best_fits = Parallel(n_jobs = -1, verbose = 10)(delayed(custom_minimize)(lambda par, blue, green : cluster_image(par, blue, green).chi_square, initial_guesses[i], args=(blue_images[i], green_images[i]), bounds = ((bmin, bmax), (gmin, gmax))) for i in range(num_images))
 
 print('Getting cluster data using best parameters ...')
-best_images = Parallel(n_jobs= -1, verbose = 10)(delayed(cluster_image)(classify_pixels(best_fits[i], blue_images[i], green_images[i])) for i in range(num_images))
+best_images = Parallel(n_jobs= -1, verbose = 10)(delayed(cluster_image)(best_fits[i], blue_images[i], green_images[i]) for i in range(num_images))
 two_sided_data = Parallel(n_jobs = -1, verbose = 10)(delayed(lambda cluster_im : cluster_im.find_two_sided_clusters())(best_images[im_set]) for im_set in range(num_images))
 
 print('Exporting length data to SQL server ...')
@@ -377,15 +377,15 @@ for im_set in range(num_images):
 
     res_lengths, ses_lengths = best_images[im_set].get_length_dist()
 
-    for i in range(len(res_lengths)):
-        edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 're', {res_lengths[i]}, {ts_assignments[0][i]})")
+    #for i in range(len(res_lengths)):
+        #edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 're', {res_lengths[i]}, {ts_assignments[0][i]})")
 
-    for i in range(len(ses_lengths)):
-        edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 'se', {ses_lengths[i]}, {ts_assignments[1][i]})")
+    #for i in range(len(ses_lengths)):
+        #edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 'se', {ses_lengths[i]}, {ts_assignments[1][i]})")
 
-    ts_lengths = ts_im_data[2][0]
-    for ts_tube in ts_lengths:
-        edit_database(f"Insert Into length_distributions (slide_sample_id, image_name, length_type, lengths) Values ({slide_sample_id},'{image_name}', 'ts', {ts_tube})")        
+    #ts_lengths = ts_im_data[2][0]
+    #for ts_tube in ts_lengths:
+        #edit_database(f"Insert Into length_distributions (slide_sample_id, image_name, length_type, lengths) Values ({slide_sample_id},'{image_name}', 'ts', {ts_tube})")
 
 
 print('Plotting and exporting found clusters ...')
@@ -416,6 +416,6 @@ for im_set in range(num_images):
     axs[i,j].set_xlim((0, xdim))
     axs[i,j].invert_yaxis()
 
-plt.savefig(f'{folder_name}\\Nanotube finder results')
+#plt.savefig(f'{folder_name}\\Nanotube finder results')
 plt.show()
 plt.close()

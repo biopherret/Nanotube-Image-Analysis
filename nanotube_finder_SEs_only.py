@@ -241,10 +241,10 @@ print('Making an educated guess for the pixel classification parameters...')
 initial_guesses, gmin, gmax = educated_guess(green_images)
 
 print('Finding best pixel classification parameters...')
-best_fits = Parallel(n_jobs = -1, verbose = 10)(delayed(custom_minimize)(lambda par, green : cluster_image(par, green).chi_square, initial_guesses[i], args=(green_images[i]), bounds = [(gmin, gmax)]) for i in range(num_images))
+best_fits = Parallel(n_jobs = -1, verbose = 10)(delayed(custom_minimize)(lambda par, green : cluster_image(par, green).chi_square, initial_guesses[i], args=([green_images[i]]), bounds = [(gmin, gmax)]) for i in range(num_images))
 
 print('Getting cluster data using best parameters ...')
-best_images = Parallel(n_jobs= -1, verbose = 10)(delayed(cluster_image)(classify_pixels(best_fits[i], green_images[i])) for i in range(num_images))
+best_images = Parallel(n_jobs= -1, verbose = 10)(delayed(cluster_image)(best_fits[i], green_images[i]) for i in range(num_images))
 
 print('Exporting length data to SQL server ...')
 for im_set in range(num_images):
@@ -273,6 +273,6 @@ for im_set in range(num_images):
     axs[i,j].set_xlim((0, xdim))
     axs[i,j].invert_yaxis()
 
-plt.savefig(f'{folder_name}\\Nanotube Finder Results')
+#plt.savefig(f'{folder_name}\\Nanotube Finder Results')
 plt.show()
 plt.close()
