@@ -312,7 +312,7 @@ class cluster_image:
         self.RE_clust_assign, self.SE_clust_assign, self.RE_clust_width, self.SE_clust_width, self.good_RE_clusters, self.good_SE_clusters = self.find_clusters() #all cluster assignments of RE pixels and SE pixel
 
         self.chi_square = 0
-
+        
         if np.size(self.SE_clust_width) == 0: #if no SE points made it to clustering (ie no clusters are found)
             self.SE_var_width = 1
             self.chi_square = np.Inf
