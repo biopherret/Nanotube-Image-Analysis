@@ -193,28 +193,28 @@ class cluster_image:
         else:
             num_SE_clust = max(clusters_SE) + 1 #assignments are from 0 to max_num so the total number of clusters is max_num + 1
 
-        RE_sizes = np.array([len(self.RE_points[np.where(clusters_RE == num_clust)][:,1]) for num_clust in range(num_RE_clust)]) #find the sizes of each cluster
-        SE_sizes = np.array([len(self.SE_points[np.where(clusters_SE == num_clust)][:,1]) for num_clust in range(num_SE_clust)])
+    
+        SE_widths = []
+        SE_sizes = []
+        for num_clust in range(num_SE_clust):
+            size = len(self.SE_points[np.where(clusters_SE == num_clust)][:,1]) #get the size of the cluster
+            SE_sizes.append(size)
+            ete_length = find_ete_length(self.SE_points[np.where(clusters_SE == num_clust)][:,1], self.SE_points[np.where(clusters_SE == num_clust)][:,0]) #get the end to end length
+            SE_widths.append(size / ete_length) #estimate the width
 
-        RE_ete_lengths = np.array([find_ete_length(self.RE_points[np.where(clusters_RE == num_clust)][:,1], self.RE_points[np.where(clusters_RE == num_clust)][:,0]) for num_clust in range(num_RE_clust)]) #find end to end lengths of each cluster
-        SE_ete_lengths = np.array([find_ete_length(self.SE_points[np.where(clusters_SE == num_clust)][:,1], self.SE_points[np.where(clusters_SE == num_clust)][:,0]) for num_clust in range(num_SE_clust)])
+        SE_good_clust = np.where((np.array(SE_sizes) > 120) & (outlier_probability(0.9, 8, 1, 30, 5, np.array(SE_widths)) < 0.9))[0] #clusters which are large enough to be nanotubes AND are less than 90% likely to be an outlier
 
-        RE_widths = np.array([RE_sizes[num_clust] / RE_ete_lengths[num_clust] for num_clust in range(num_RE_clust)]) #get the width using the end to end length
-        SE_widths = np.array([SE_sizes[num_clust] / SE_ete_lengths[num_clust] for num_clust in range(num_SE_clust)])
+        RE_widths = []
+        RE_sizes = []
+        for num_clust in range(num_RE_clust):
+            size = len(self.RE_points[np.where(clusters_RE == num_clust)][:,1]) #get the size of the cluster
+            RE_sizes.append(size)
+            ete_length = find_ete_length(self.RE_points[np.where(clusters_RE == num_clust)][:,1], self.RE_points[np.where(clusters_RE == num_clust)][:,0]) #get the end to end length
+            RE_widths.append(size / ete_length) #estimate the width
 
-        RE_good_clust = np.where((RE_sizes > 120) & (outlier_probability(0.9, 8, 1, 30, 5, RE_widths) < 0.9))[0] #clusters which are large enough to be nanotubes AND are less than 90% likely to be an outlier
-        SE_good_clust = np.where((SE_sizes > 120) & (outlier_probability(0.9, 8, 1, 30, 5, SE_widths) < 0.9))[0]
+        RE_good_clust = np.where((np.array(RE_sizes) > 120) & (outlier_probability(0.9, 8, 1, 30, 5, np.array(RE_widths)) < 0.9))[0] #clusters which are large enough to be nanotubes AND are less than 90% likely to be an outlier
 
-        RE_lengths = np.array([RE_sizes[num_clust] / 8 for num_clust in range(num_RE_clust)]) #find the contour length using the know nanotube width
-        SE_lengths = np.array([SE_sizes[num_clust] / 8 for num_clust in range(num_SE_clust)])
-
-        #only return dimensions for good clusters
-        RE_lengths = RE_lengths[RE_good_clust]
-        SE_lengths = SE_lengths[SE_good_clust]
-        RE_widths = RE_widths[RE_good_clust]
-        SE_widths = SE_widths[SE_good_clust]
-
-        return clusters_RE, clusters_SE, (RE_lengths, RE_widths, RE_sizes), (SE_lengths, SE_widths, SE_sizes), RE_good_clust, SE_good_clust
+        return clusters_RE, clusters_SE, np.array(RE_widths)[RE_good_clust], np.array(SE_widths)[SE_good_clust], RE_good_clust, SE_good_clust
 
     def find_two_sided_clusters(self):
         '''finds clusters, and their bounds which make up two sided tubes, ie tubes which one REs side and one SEs side
@@ -222,12 +222,7 @@ class cluster_image:
         Returns:
             tuple, array: first array for the cluster pairs (REs, SEs) which make up two sided tubes, second for the (xmin, xmax, ymin, ymax) bounds of each two sided tube found
         '''
-
-        RE_points = [self.RE_points[np.where(self.RE_clust_assign == num_clust)] for num_clust in self.good_RE_clusters]
-        SE_points = [self.SE_points[np.where(self.SE_clust_assign == num_clust)] for num_clust in self.good_SE_clusters]
-        RE_sizes = [self.RE_clust_dim[2][num_clust] for num_clust in self.good_RE_clusters]
-        SE_sizes = [self.SE_clust_dim[2][num_clust] for num_clust in self.good_SE_clusters]
-
+        
         overlapping_clusters = []
         overlapping_cluster_bounds = []
         overlapping_cluster_widths = []
@@ -237,19 +232,24 @@ class cluster_image:
         re_is_ts = np.zeros(len(self.good_RE_clusters))
 
         for RE_cluster in range(len(self.good_RE_clusters)):
+            RE_points = self.RE_points[np.where(self.RE_clust_assign == RE_cluster)]
             for SE_cluster in range(len(self.good_SE_clusters)):
-                if np.min(cdist(RE_points[RE_cluster], SE_points[SE_cluster])) <= 1: #if these two clusters are touching
+                SE_points = self.SE_points[np.where(self.SE_clust_assign == SE_cluster)]
+                if np.min(cdist(RE_points, SE_points)) <= 1: #if these two clusters are touching
+                    RE_size = len(self.RE_points[np.where(self.RE_clust_assign == RE_cluster)][:,1])
+                    SE_size = len(self.SE_points[np.where(self.SE_clust_assign == SE_cluster)][:,1])
+
                     x_min = min(min(RE_points[RE_cluster][:,1]), min(SE_points[SE_cluster][:,1]))
                     x_max = max(max(RE_points[RE_cluster][:,1]), max(SE_points[SE_cluster][:,1]))
                     y_min = min(min(RE_points[RE_cluster][:,0]), min(SE_points[SE_cluster][:,0]))
                     y_max = max(max(RE_points[RE_cluster][:,0]), max(SE_points[SE_cluster][:,0]))
-                    length = np.sqrt((x_max - x_min)**2 + (y_max - y_min)**2)
-                    width = (RE_sizes[RE_cluster] + SE_sizes[SE_cluster]) / length
+                    ete_length = np.sqrt((x_max - x_min)**2 + (y_max - y_min)**2)
+                    width = (RE_size + SE_size) / ete_length
 
                     if outlier_probability(0.9, 8, 1, 30, 5, width) < 0.9: #if it is not an outlier
                         overlapping_clusters.append(np.array([self.good_RE_clusters[RE_cluster], self.good_SE_clusters[SE_cluster]]))
                         overlapping_cluster_bounds.append(np.array([x_min, x_max, y_min, y_max]))
-                        overlapping_cluster_lengths.append(length)
+                        overlapping_cluster_lengths.append(ete_length)
                         overlapping_cluster_widths.append(width)
 
                         re_is_ts[RE_cluster] = 1 #assign this tube as being in a ts tube
@@ -263,30 +263,30 @@ class cluster_image:
 
         self.RE_points, self.SE_points = np.argwhere(self.filt_image == 1), np.argwhere(self.filt_image == 2)#[:,1] is x coordinates, [:,0] is y coordinates
 
-        self.RE_clust_assign, self.SE_clust_assign, self.RE_clust_dim, self.SE_clust_dim, self.good_RE_clusters, self.good_SE_clusters = self.find_clusters() #all cluster assignments of RE pixels and SE pixel
+        self.RE_clust_assign, self.SE_clust_assign, self.RE_clust_width, self.SE_clust_width, self.good_RE_clusters, self.good_SE_clusters = self.find_clusters() #all cluster assignments of RE pixels and SE pixel
 
         self.chi_square = 0
         
-        if np.size(self.SE_clust_dim[1]) == 0: #if no SE points made it to clustering (ie no clusters are found)
+        if np.size(self.SE_clust_width) == 0: #if no SE points made it to clustering (ie no clusters are found)
             self.SE_var_width = 1
             self.chi_square = np.Inf
         else:
-            if np.var(self.SE_clust_dim[1]) == 0: #if only one cluster is found
+            if np.var(self.SE_clust_width) == 0: #if only one cluster is found
                 self.SE_var_width = 1
             else:
-                self.SE_var_width =  np.var(self.SE_clust_dim[1])
+                self.SE_var_width =  np.var(self.SE_clust_width)
 
-        if np.size(self.RE_clust_dim[1]) == 0: #if no RE points made it to clustering (ie no clusters are found)
+        if np.size(self.RE_clust_width) == 0: #if no RE points made it to clustering (ie no clusters are found)
             self.RE_var_width = 1
             self.chi_square = np.Inf
         else:
-            if np.var(self.RE_clust_dim[1]) == 0: #if only one cluster is found
+            if np.var(self.RE_clust_width) == 0: #if only one cluster is found
                 self.RE_var_width = 1
             else:
-                self.RE_var_width =  np.var(self.RE_clust_dim[1])
+                self.RE_var_width =  np.var(self.RE_clust_width)
         
         if self.chi_square != np.Inf:
-            self.chi_square = np.sum((self.RE_clust_dim[1] - 8)**2 / self.RE_var_width) / len(self.good_RE_clusters) + np.sum((self.SE_clust_dim[1] - 8)**2 / self.SE_var_width) / len(self.good_SE_clusters)
+            self.chi_square = np.sum((self.RE_clust_width - 8)**2 / self.RE_var_width) / len(self.good_RE_clusters) + np.sum((self.SE_clust_width - 8)**2 / self.SE_var_width) / len(self.good_SE_clusters)
 
 print('Loading images ...')
 #change and get current working directory (cwd)

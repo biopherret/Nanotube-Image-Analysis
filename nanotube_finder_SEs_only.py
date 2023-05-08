@@ -160,21 +160,17 @@ class cluster_image:
         else:
             num_SE_clust = max(clusters_SE) + 1 #assignments are from 0 to max_num so the total number of clusters is max_num + 1
 
-        SE_sizes = np.array([len(self.SE_points[np.where(clusters_SE == num_clust)][:,1]) for num_clust in range(num_SE_clust)]) #find the sizes of each cluster
+        SE_widths = []
+        SE_sizes = []
+        for num_clust in range(num_SE_clust):
+            size = len(self.SE_points[np.where(clusters_SE == num_clust)][:,1]) #get the size of the cluster
+            SE_sizes.append(size)
+            ete_length = find_ete_length(self.SE_points[np.where(clusters_SE == num_clust)][:,1], self.SE_points[np.where(clusters_SE == num_clust)][:,0]) #get the end to end length
+            SE_widths.append(size / ete_length) #estimate the width
 
-        SE_ete_lengths = np.array([find_ete_length(self.SE_points[np.where(clusters_SE == num_clust)][:,1], self.SE_points[np.where(clusters_SE == num_clust)][:,0]) for num_clust in range(num_SE_clust)]) #find end to end lengths of each cluster
+        SE_good_clust = np.where((np.array(SE_sizes) > 120) & (outlier_probability(0.9, 8, 1, 30, 5, np.array(SE_widths)) < 0.9))[0] #clusters which are large enough to be nanotubes AND are less than 90% likely to be an outlier
 
-        SE_widths = np.array([SE_sizes[num_clust] / SE_ete_lengths[num_clust] for num_clust in range(num_SE_clust)]) #use end to end lengths to get widths (roughly, this assumes straight tubes which most of them are)
-
-        SE_good_clust = np.where((SE_sizes > 120) & (outlier_probability(0.9, 8, 1, 30, 5, SE_widths) < 0.9))[0] #clusters which are large enough to be nanotubes AND are less than 90% likely to be an outlier
-
-        SE_lengths = np.array([SE_sizes[num_clust] / 8 for num_clust in range(num_SE_clust)]) #get the contour length using the known nanotube width in pixels
-
-        #only return dimensions for good clusters
-        SE_lengths = SE_lengths[SE_good_clust]
-        SE_widths = SE_widths[SE_good_clust]
-
-        return clusters_SE, (SE_lengths, SE_widths, SE_sizes), SE_good_clust
+        return clusters_SE, np.array(SE_widths)[SE_good_clust], SE_good_clust
 
     def __init__(self, par, green):
         self.image = classify_pixels(par, green)
@@ -182,18 +178,18 @@ class cluster_image:
 
         self.SE_points = np.argwhere(self.filt_image == 2)#[:,1] is x coordinates, [:,0] is y coordinates
 
-        self.SE_clust_assign, self.SE_clust_dim, self.good_SE_clusters = self.find_clusters() #all cluster assignments of RE pixels and SE pixel
+        self.SE_clust_assign, self.SE_clust_widths, self.good_SE_clusters = self.find_clusters() #all cluster assignments of RE pixels and SE pixel
 
-        if np.size(self.SE_clust_dim[1]) == 0: #if no points made it to clustering
+        if np.size(self.SE_clust_widths) == 0: #if no points made it to clustering
             self.SE_var_width = 1
             self.chi_square = np.Inf
         else:
-            if np.var(self.SE_clust_dim[1]) == 0:
+            if np.var(self.SE_clust_widths) == 0:
                 self.SE_var_width = 1
             else:
-                self.SE_var_width = np.var(self.SE_clust_dim[1])
+                self.SE_var_width = np.var(self.SE_clust_widths)
 
-            self.chi_square = np.sum((self.SE_clust_dim[1] - 8)**2 / self.SE_var_width) / len(self.good_SE_clusters)
+            self.chi_square = np.sum((self.SE_clust_widths - 8)**2 / self.SE_var_width) / len(self.good_SE_clusters)
 
 print('Loading images ...')
 #change and get current working directory (cwd)
