@@ -9,6 +9,9 @@ from sqlalchemy.engine import URL
 from sqlalchemy import create_engine
 import sqlalchemy as sa
 import pyodbc
+from skimage.morphology import skeletonize
+from fil_finder import FilFinder2D
+import astropy.units as u
 
 plt.style.use('lexi_plt_style.mplstyle')
 
@@ -172,6 +175,31 @@ class cluster_image:
 
         return clusters_SE, np.array(SE_widths)[SE_good_clust], SE_good_clust
 
+    def get_length_dist(self):
+        '''Get the length distribution of the found clusters
+
+        Returns:
+            np.array: length distribution
+        '''
+        se_contour_lengths = []
+        for se_clust in self.good_SE_clusters:
+            clust_ypoints = self.SE_points[self.SE_clust_assign == se_clust, 0] #get the x and y points of the cluster
+            clust_xpoints = self.SE_points[self.SE_clust_assign == se_clust, 1]
+
+            clust_image = self.filt_image[min(clust_ypoints):max(clust_ypoints), min(clust_xpoints):max(clust_xpoints)] #make a crop of the classified image to only include one cluster
+            clust_image[clust_image == 2] = 1 #re-assign any 2 points to 1s so that it is a true binary image
+
+            skuly = skeletonize(clust_image) #skelinotize the image
+
+            fil = FilFinder2D(skuly, mask = skuly)
+            fil.create_mask(border_masking=True, verbose=False, use_existing_mask=True)
+            fil.medskel(verbose=False)
+            fil.analyze_skeletons(skel_thresh=10*u.pix)
+
+            se_contour_lengths.append(np.count_nonzero(fil.skeleton_longpath == 1)) #find the length of the longest path on the skeleton
+
+        return np.array(se_contour_lengths)
+
     def __init__(self, par, green):
         self.image = classify_pixels(par, green)
         self.filt_image = self.filter_lone_pixels() #filters out classified pixels which are not neighboring any pixels of the same classification
@@ -222,7 +250,7 @@ print('Exporting length data to SQL server ...')
 for im_set in range(num_images):
     image_name = image_files[im_set][:-4]
 
-    ses_lengths = best_images[im_set].SE_clust_dim[0]
+    ses_lengths = best_images[im_set].get_length_dist()
     for se_tube in ses_lengths:
         edit_database(f"Insert Into length_distributions (slide_sample_id, image_name, length_type, lengths) Values ({slide_sample_id},'{image_name}', 'se', {se_tube})")
 

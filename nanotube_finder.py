@@ -11,6 +11,9 @@ from sqlalchemy.engine import URL
 from sqlalchemy import create_engine
 import sqlalchemy as sa
 import pyodbc
+from skimage.morphology import skeletonize
+from fil_finder import FilFinder2D
+import astropy.units as u
 
 plt.style.use('lexi_plt_style.mplstyle')
 
@@ -216,6 +219,49 @@ class cluster_image:
 
         return clusters_RE, clusters_SE, np.array(RE_widths)[RE_good_clust], np.array(SE_widths)[SE_good_clust], RE_good_clust, SE_good_clust
 
+    def get_length_dist(self):
+        '''Get the length distribution of the found clusters
+
+        Returns:
+            np.array: length distribution
+        '''
+        se_contour_lengths = []
+        for se_clust in self.good_SE_clusters:
+            clust_ypoints = self.SE_points[self.SE_clust_assign == se_clust, 0] #get the x and y points of the cluster
+            clust_xpoints = self.SE_points[self.SE_clust_assign == se_clust, 1]
+
+            clust_image = self.filt_image[min(clust_ypoints):max(clust_ypoints), min(clust_xpoints):max(clust_xpoints)] #make a crop of the classified image to only include one cluster
+            clust_image[clust_image == 1] = 0 #assign any REs points that happen to be in the image to background
+            clust_image[clust_image == 2] = 1 #re-assign any 2 points to 1s so that it is a true binary image
+
+            skuly = skeletonize(clust_image) #skelinotize the image
+
+            fil = FilFinder2D(skuly, mask = skuly)
+            fil.create_mask(border_masking=True, verbose=False, use_existing_mask=True)
+            fil.medskel(verbose=False)
+            fil.analyze_skeletons(skel_thresh=10*u.pix)
+
+            se_contour_lengths.append(np.count_nonzero(fil.skeleton_longpath == 1)) #find the length of the longest path on the skeleton
+    
+        re_contour_lengths = []
+        for re_clust in self.good_RE_clusters:
+            clust_ypoints = self.RE_points[self.RE_clust_assign == re_clust, 0] #get the x and y points of the cluster
+            clust_xpoints = self.RE_points[self.RE_clust_assign == re_clust, 1]
+
+            clust_image = self.filt_image[min(clust_ypoints):max(clust_ypoints), min(clust_xpoints):max(clust_xpoints)] #make a crop of the classified image to only include one cluster
+            clust_image[clust_image == 2] = 0 #assign any SEs points in the image to 0
+
+            skuly = skeletonize(clust_image) #skelinotize the image
+
+            fil = FilFinder2D(skuly, mask = skuly)
+            fil.create_mask(border_masking=True, verbose=False, use_existing_mask=True)
+            fil.medskel(verbose=False)
+            fil.analyze_skeletons(skel_thresh=10*u.pix)
+
+            re_contour_lengths.append(np.count_nonzero(fil.skeleton_longpath == 1)) #find the length of the longest path on the skeleton
+
+        return np.array(re_contour_lengths), np.array(se_contour_lengths)
+
     def find_two_sided_clusters(self):
         '''finds clusters, and their bounds which make up two sided tubes, ie tubes which one REs side and one SEs side
 
@@ -328,12 +374,12 @@ print('Exporting length data to SQL server ...')
 for im_set in range(num_images):
     image_name = image_files[1::2][im_set][:-10]
     ts_im_data, ts_assignments = two_sided_data[im_set]
-    
-    res_lengths = best_images[im_set].RE_clust_dim[0]
+
+    res_lengths, ses_lengths = best_images[im_set].get_length_dist()
+
     for i in range(len(res_lengths)):
         edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 're', {res_lengths[i]}, {ts_assignments[0][i]})")
 
-    ses_lengths = best_images[im_set].SE_clust_dim[0]
     for i in range(len(ses_lengths)):
         edit_database(f"Insert Into length_distributions Values ({slide_sample_id},'{image_name}', 'se', {ses_lengths[i]}, {ts_assignments[1][i]})")
 
