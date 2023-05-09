@@ -164,15 +164,17 @@ class cluster_image:
             num_SE_clust = max(clusters_SE) + 1 #assignments are from 0 to max_num so the total number of clusters is max_num + 1
 
         SE_widths = []
-        SE_sizes = []
         for num_clust in range(num_SE_clust):
             size = len(self.SE_points[np.where(clusters_SE == num_clust)][:,1]) #get the size of the cluster
-            SE_sizes.append(size)
-            ete_length = find_ete_length(self.SE_points[np.where(clusters_SE == num_clust)][:,1], self.SE_points[np.where(clusters_SE == num_clust)][:,0]) #get the end to end length
-            SE_widths.append(size / ete_length) #estimate the width
 
-        SE_good_clust = np.where((np.array(SE_sizes) > 120) & (outlier_probability(0.9, 8, 1, 30, 5, np.array(SE_widths)) < 0.9))[0] #clusters which are large enough to be nanotubes AND are less than 90% likely to be an outlier
+            if size > 120: #f the cluster is big enough to be a nanotube
+                ete_length = find_ete_length(self.SE_points[np.where(clusters_SE == num_clust)][:,1], self.SE_points[np.where(clusters_SE == num_clust)][:,0]) #get the end to end length
+                SE_widths.append(size / ete_length) #estimate the width
+            else:
+                SE_widths.append(np.nan)
 
+        SE_good_clust = np.where(outlier_probability(0.9, 8, 1, 30, 5, np.array(SE_widths)) < 0.9)[0] #only keep the clusters which are unlikely to be outliers
+        
         return clusters_SE, np.array(SE_widths)[SE_good_clust], SE_good_clust
 
     def get_length_dist(self):
