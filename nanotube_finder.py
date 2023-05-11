@@ -284,9 +284,9 @@ class cluster_image:
         se_is_ts = np.zeros(len(self.good_SE_clusters)) #start with assumption all tubes are not part of ts tube
         re_is_ts = np.zeros(len(self.good_RE_clusters))
 
-        for RE_cluster in range(len(self.good_RE_clusters)):
+        for RE_cluster in self.good_RE_clusters:
             RE_points = self.RE_points[np.where(self.RE_clust_assign == RE_cluster)]
-            for SE_cluster in range(len(self.good_SE_clusters)):
+            for SE_cluster in self.good_SE_clusters:
                 SE_points = self.SE_points[np.where(self.SE_clust_assign == SE_cluster)]
                 if np.min(cdist(RE_points, SE_points)) <= 1: #if these two clusters are touching
                     RE_size = len(self.RE_points[np.where(self.RE_clust_assign == RE_cluster)][:,1])
@@ -300,13 +300,13 @@ class cluster_image:
                     width = (RE_size + SE_size) / ete_length
 
                     if outlier_probability(0.9, 8, 1, 30, 5, width) < 0.9: #if it is not an outlier
-                        overlapping_clusters.append(np.array([self.good_RE_clusters[RE_cluster], self.good_SE_clusters[SE_cluster]]))
+                        overlapping_clusters.append(np.array([RE_cluster, SE_cluster]))
                         overlapping_cluster_bounds.append(np.array([x_min, x_max, y_min, y_max]))
                         overlapping_cluster_lengths.append(ete_length)
                         overlapping_cluster_widths.append(width)
 
-                        re_is_ts[RE_cluster] = 1 #assign this tube as being in a ts tube
-                        se_is_ts[SE_cluster] = 1
+                        re_is_ts[np.where(self.good_RE_clusters == RE_cluster)] = 1 #assign this tube as being in a ts tube
+                        se_is_ts[np.where(self.good_SE_clusters == SE_cluster)] = 1
 
         return (np.array(overlapping_clusters), np.array(overlapping_cluster_bounds), np.array((np.array(overlapping_cluster_lengths), np.array(overlapping_cluster_widths)))), (re_is_ts, se_is_ts)
 
