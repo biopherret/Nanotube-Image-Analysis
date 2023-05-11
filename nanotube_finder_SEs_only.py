@@ -196,9 +196,11 @@ class cluster_image:
             fil = FilFinder2D(skuly, mask = skuly)
             fil.create_mask(border_masking=True, verbose=False, use_existing_mask=True)
             fil.medskel(verbose=False)
-            fil.analyze_skeletons(skel_thresh=10*u.pix)
-
-            se_contour_lengths.append(np.count_nonzero(fil.skeleton_longpath == 1)) #find the length of the longest path on the skeleton
+            try:
+                fil.analyze_skeletons(skel_thresh=10*u.pix)
+                se_contour_lengths.append(np.count_nonzero(fil.skeleton_longpath == 1)) #find the length of the longest path on the skeleton
+            except:
+                pass
 
         return np.array(se_contour_lengths)
 
